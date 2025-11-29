@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محاكاة تطبيق التاكسي (الراكب والسائق)</title>
+    <title>محاكاة تطبيق التاكسي (الراكب والسائق) - مع صوت</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     
@@ -54,10 +54,12 @@
         .map-container {
             height: 100%;
             width: 100%;
+            /* محاكاة شكل الخريطة باستخدام صورة خلفية عامة */
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/OpenStreetMap_Logo.svg/1200px-OpenStreetMap_Logo.svg.png');
             background-color: #e9e9e9;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 100"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="5" fill="%23666">OpenStreetMap Simulation</text></svg>');
             background-repeat: no-repeat;
-            background-size: 100% 100%;
+            background-size: cover; /* تغطية المساحة */
+            background-position: center;
             position: relative;
         }
 
@@ -71,10 +73,10 @@
             transform: translate(-50%, -50%);
         }
 
-        .marker-start { top: 30%; right: 50%; background-color: #dc3545; }
+        .marker-start { top: 25%; right: 40%; background-color: #dc3545; }
         .marker-end { top: 60%; right: 40%; background-color: var(--primary-blue); }
-        .marker-driver { top: 50%; right: 60%; width: 50px; height: 50px; background-color: transparent; border: none; }
-        .marker-driver i { font-size: 30px; color: #333; }
+        .marker-driver { top: 40%; right: 50%; width: 50px; height: 50px; background-color: transparent; border: none; }
+        .marker-driver i { font-size: 30px; color: var(--primary-blue); }
 
 
         /* -------------------------- */
@@ -98,8 +100,6 @@
         /* -------------------------- */
         /* تنسيقات واجهة الراكب */
         /* -------------------------- */
-        #passenger-screen .map-container { height: 100%; }
-        
         .search-input-box {
             background-color: #f0f0f0;
             border-radius: 10px;
@@ -118,17 +118,6 @@
             text-align: right;
             outline: none;
         }
-
-        .address-suggestion {
-            display: flex;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
-        }
-        .address-suggestion i { color: var(--primary-blue); margin-left: 10px; }
-        .address-suggestion:last-child { border-bottom: none; }
-
         .trip-type-card {
             border: 1px solid #ccc;
             border-radius: 10px;
@@ -143,18 +132,7 @@
         .trip-type-card:hover, .trip-type-card.selected { border-color: var(--primary-blue); border-width: 2px; }
         .trip-details { text-align: right; }
         .trip-details strong { display: block; font-size: 1.1em; color: var(--text-dark); }
-        .trip-details span { font-size: 0.9em; color: #666; }
         .trip-price { font-size: 1.2em; font-weight: bold; color: var(--green-available); }
-        .trip-type-card img { width: 40px; }
-
-        .promo-code {
-            font-size: 0.9em;
-            color: var(--primary-blue);
-            padding: 10px;
-            border-top: 1px solid #eee;
-            text-align: center;
-            cursor: pointer;
-        }
 
         /* -------------------------- */
         /* تنسيقات واجهة السائق */
@@ -178,7 +156,6 @@
             font-size: 1.3em;
             font-weight: bold;
             cursor: pointer;
-            transition: background-color 0.3s;
             box-shadow: 0 4px 10px rgba(40, 167, 69, 0.5);
         }
 
@@ -191,14 +168,10 @@
             justify-content: space-around;
             padding: 10px 0;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            z-index: 10;
         }
         .driver-menu-bar button {
-            background: none;
-            border: none;
-            color: #666;
-            font-size: 0.8em;
-            cursor: pointer;
-            outline: none;
+            background: none; border: none; color: #666; font-size: 0.8em; cursor: pointer; outline: none;
         }
         .driver-menu-bar i { font-size: 1.5em; display: block; margin-bottom: 3px; }
 
@@ -217,24 +190,13 @@
             z-index: 20;
             animation: pulse 1s infinite;
         }
-        .request-details p { margin: 5px 0; font-size: 1.1em; }
-        .request-details strong { color: var(--primary-blue); }
         .request-price { font-size: 2em; font-weight: bold; color: var(--green-available); margin: 15px 0; }
         .request-actions button {
-            width: 45%;
-            padding: 10px;
-            margin: 5px;
-            border-radius: 8px;
-            font-size: 1.1em;
-            font-weight: bold;
-            color: white;
-            border: none;
-            cursor: pointer;
+            width: 45%; padding: 10px; margin: 5px; border-radius: 8px; font-size: 1.1em; font-weight: bold; color: white; border: none; cursor: pointer;
         }
         .request-actions .accept { background-color: var(--green-available); }
         .request-actions .reject { background-color: #dc3545; }
 
-        /* Animation for new request pulse */
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7); }
             70% { box-shadow: 0 0 0 15px rgba(0, 123, 255, 0); }
@@ -245,16 +207,13 @@
         /* تنسيقات لوحة التحكم (مختصرة) */
         /* -------------------------- */
         #admin-screen { background-color: #212529; color: white; padding: 20px; }
-        #admin-screen h2 { color: #fff; border-bottom: 2px solid var(--primary-blue); padding-bottom: 10px; }
         .admin-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px; }
         .admin-stat { background-color: #343a40; padding: 15px; border-radius: 8px; text-align: center; }
-        .admin-stat h3 { margin: 0; color: #ffc107; }
-        .admin-stat p { font-size: 0.9em; }
-
-
     </style>
 </head>
 <body>
+
+<audio id="notification-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-bell-notification-9.mp3" preload="auto"></audio>
 
 <div class="app-shell">
     
@@ -274,6 +233,8 @@
     <div id="passenger-screen" class="screen">
         <div class="map-container">
             <div class="map-marker marker-start" style="top: 25%; right: 40%; border-radius: 0; transform: translate(-50%, -100%) rotate(45deg); width: 15px; height: 15px;"></div>
+            <div class="map-marker marker-end"></div>
+
 
             <div class="bottom-sheet" style="height: auto; max-height: 90%;">
                 <p style="text-align: center; color: #999; margin-top: -10px;">انزلق للأعلى لإغلاق</p>
@@ -285,6 +246,7 @@
 
                 <p style="font-weight: bold; margin-bottom: 5px;">📍 بغداد، باب المعظم، شارع صافي الدين الحلي</p>
                 <p style="font-weight: bold; margin-bottom: 5px;">📍 بغداد، باب المعظم، شارع صافي الدين الحلي</p>
+                <button onclick="showScreen('role-screen')" style="background-color: #ccc; width: 100%; margin-top: 10px;">العودة</button>
             </div>
 
             <div id="trip-details-sheet" class="bottom-sheet" style="height: auto; transform: translateY(100%); transition: transform 0.4s;">
@@ -293,32 +255,16 @@
                 <h3 style="margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px;">الوصول: بغداد، شارع السياب</h3>
                 
                 <div class="trip-type-card selected">
-                    <div class="trip-details">
-                        <strong>سوبر</strong>
-                        <span>خيار الأفضل لانتظارك</span>
-                    </div>
+                    <div class="trip-details"><strong>سوبر</strong><span>خيار الأفضل لانتظارك</span></div>
                     <span class="trip-price">٥,٠٠٠ دينار</span>
                     <i class="fas fa-car" style="color: #6c757d; font-size: 2em;"></i>
                 </div>
-
                 <div class="trip-type-card">
-                    <div class="trip-details">
-                        <strong>توفير</strong>
-                        <span>رحلات ملائمة التكلفة</span>
-                    </div>
+                    <div class="trip-details"><strong>توفير</strong><span>رحلات ملائمة التكلفة</span></div>
                     <span class="trip-price">٣,٠٠٠ دينار</span>
                     <i class="fas fa-car-side" style="color: #6c757d; font-size: 2em;"></i>
                 </div>
                 
-                <div class="trip-type-card">
-                    <div class="trip-details">
-                        <strong>بلس</strong>
-                        <span>راحة أكبر</span>
-                    </div>
-                    <span class="trip-price">٣,٧٥٠ دينار</span>
-                    <i class="fas fa-car-alt" style="color: #6c757d; font-size: 2em;"></i>
-                </div>
-
                 <button class="activation-button" style="width: 100%; margin-top: 15px; background-color: var(--primary-blue);" onclick="alert('جاري طلب رحلة سوبر...');">طلب رحلة سوبر</button>
                 <div class="promo-code" onclick="showScreen('role-screen')"><i class="fas fa-tag"></i> رمز الخصم / خيارات الرحلة</div>
             </div>
@@ -327,8 +273,8 @@
 
     <div id="driver-screen" class="screen">
         <div class="map-container">
-            <div class="map-marker marker-driver" style="top: 40%; right: 50%;">
-                <i class="fas fa-car-side" style="color: var(--primary-blue);"></i>
+            <div class="map-marker marker-driver">
+                <i class="fas fa-car-side"></i>
             </div>
             
             <div class="driver-menu-bar">
@@ -347,7 +293,7 @@
                 <div class="request-price">٢,٧٥٠ دينار</div>
                 
                 <div class="request-details">
-                    <p>مدة الوصول: <strong>٢ دقيقة - ٣٩٠ متر</strong></p>
+                    <p>مدة الوصول: <strong>٢ دقيقة - ٤ كم</strong></p>
                     <p>من: <strong>بغداد، شارع فلسطين</strong></p>
                     <p>إلى: <strong>بغداد، زيونة، شارع فلسطين</strong></p>
                     <p style="font-size: 0.9em; color: #999;">الرحلة سوبر</p>
@@ -362,22 +308,26 @@
     </div>
     
     <div id="admin-screen" class="screen">
-        <h2 style="text-align: center;">🖥️ لوحة التحكم الإدارية</h2>
-        <div class="admin-grid">
-            <div class="admin-stat"><h3>55</h3><p>سائق نشط</p></div>
-            <div class="admin-stat"><h3>128</h3><p>رحلة مكتملة</p></div>
-            <div class="admin-stat"><h3>$1,500</h3><p>إجمالي الإيرادات</p></div>
-            <div class="admin-stat"><h3>240</h3><p>مستخدم جديد</p></div>
+        <div style="padding: 20px;">
+            <h2 style="text-align: center; color: white;">🖥️ لوحة التحكم الإدارية</h2>
+            <div class="admin-grid">
+                <div class="admin-stat"><h3>55</h3><p>سائق نشط</p></div>
+                <div class="admin-stat"><h3>128</h3><p>رحلة مكتملة</p></div>
+            </div>
+            <h3 style="margin-top: 30px; text-align: right; color: #ffc107;">مراقبة الخريطة المباشرة</h3>
+            <div style="height: 300px; background-color: #333; border-radius: 10px; line-height: 300px; text-align: center; color: #999;">
+                
+            </div>
+            <button class="activation-button" style="background-color: #007bff; width: 100%; margin-top: 20px;" onclick="showScreen('role-screen')">العودة للصفحة الرئيسية</button>
         </div>
-        <h3 style="margin-top: 30px; text-align: right; color: #ffc107;">مراقبة الخريطة المباشرة</h3>
-        <div style="height: 300px; background-color: #333; border-radius: 10px; line-height: 300px; text-align: center; color: #999;">
-                    </div>
-        <button class="activation-button" style="background-color: #007bff; width: 100%; margin-top: 20px;" onclick="showScreen('role-screen')">العودة للصفحة الرئيسية</button>
     </div>
 
 </div>
 
 <script>
+    // الحصول على عنصر الصوت
+    const notificationSound = document.getElementById('notification-sound');
+
     // الدالة الرئيسية لعرض الشاشات
     function showScreen(screenId) {
         const screens = document.querySelectorAll('.screen');
@@ -386,17 +336,17 @@
         });
         document.getElementById(screenId).style.display = 'block';
 
-        // إخفاء طلب الرحلة عند الانتقال إلى شاشة أخرى
+        // إيقاف الصوت عند مغادرة شاشة السائق
         if (screenId !== 'driver-screen') {
             document.getElementById('new-request-popup').style.display = 'none';
+            notificationSound.pause();
+            notificationSound.currentTime = 0; // إعادة الصوت للبداية
         }
         
         // إعادة واجهة تفاصيل الرحلة في شاشة الراكب إلى حالتها الأصلية
-        if (screenId !== 'passenger-screen') {
-            const tripDetailsSheet = document.getElementById('trip-details-sheet');
-            if (tripDetailsSheet) {
-                tripDetailsSheet.style.transform = 'translateY(100%)';
-            }
+        const tripDetailsSheet = document.getElementById('trip-details-sheet');
+        if (tripDetailsSheet) {
+            tripDetailsSheet.style.transform = 'translateY(100%)';
         }
     }
 
@@ -415,9 +365,12 @@
         const popup = document.getElementById('new-request-popup');
         popup.style.display = 'block';
 
-        // محاكاة نغمة التنبيه: في التطبيق الحقيقي، يتم تشغيل ملف صوتي هنا.
-        console.log("محاكاة: جرس تنبيه طلب رحلة جديد يعمل الآن...");
-        alert("محاكاة: لقد وصل طلب رحلة جديد! اضغط قبول أو رفض.");
+        // تشغيل الصوت
+        notificationSound.play().catch(error => {
+            // يتم عرض هذا الخطأ إذا لم يسمح المتصفح بالتشغيل التلقائي
+            console.warn("فشل تشغيل الصوت التلقائي: " + error);
+            alert("⚠️ لتشغيل الصوت في المتصفح، يرجى التفاعل مع الصفحة أولاً (مثل الضغط على أي زر مرة واحدة).");
+        });
         
         // إخفاء زر التفعيل بعد التنبيه
         document.getElementById('driver-status-control').style.display = 'none';
@@ -425,6 +378,8 @@
 
     // محاكاة لقبول الرحلة
     function acceptRequest() {
+        notificationSound.pause();
+        notificationSound.currentTime = 0;
         alert("تم قبول الرحلة! جاري التوجه نحو موقع الراكب...");
         document.getElementById('new-request-popup').style.display = 'none';
         // إعادة زر التفعيل
@@ -433,6 +388,8 @@
 
     // محاكاة لرفض الرحلة
     function rejectRequest() {
+        notificationSound.pause();
+        notificationSound.currentTime = 0;
         alert("تم رفض الرحلة.");
         document.getElementById('new-request-popup').style.display = 'none';
         // إعادة زر التفعيل
