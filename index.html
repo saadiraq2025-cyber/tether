@@ -1,83 +1,240 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<title>منصة تعليمية</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-body{
-    background:#f2f2f2;
-    font-family:tahoma;
-    padding:20px;
-}
-.card{
-    background:#fff;
-    padding:20px;
-    border-radius:10px;
-    max-width:420px;
-    margin:auto;
-    box-shadow:0 0 10px #ccc;
-}
-input, select{
-    width:100%;
-    padding:12px;
-    margin:10px 0;
-    border:1px solid #bbb;
-    border-radius:6px;
-}
-button{
-    width:100%;
-    padding:12px;
-    background:#2b7cff;
-    color:#fff;
-    border:none;
-    border-radius:6px;
-    font-size:18px;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام التاكسي المتكامل - نموذج هيكلي</title>
+    <style>
+        /* -------------------------- */
+        /* CSS العام والتنسيقات الأساسية */
+        /* -------------------------- */
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 { color: #007bff; }
+        h2 { color: #333; }
+        
+        input[type="text"], input[type="password"], input[type="email"] {
+            padding: 12px;
+            margin: 10px 0;
+            width: 90%;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            box-sizing: border-box; /* لضمان أن العرض يشمل الحشو والحدود */
+        }
+        
+        button {
+            padding: 12px 20px;
+            margin: 10px 0;
+            width: 90%;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        /* تنسيقات زر تسجيل الدخول */
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-primary:hover { background-color: #0056b3; }
+        
+        /* تنسيقات زر اختيار الدور */
+        .btn-role { background-color: #28a745; color: white; margin-top: 20px; }
+        .btn-role:hover { background-color: #1e7e34; }
+
+        /* إخفاء جميع الواجهات ما عدا واجهة تسجيل الدخول */
+        .screen { display: none; padding: 10px; }
+        #login-screen { display: block; }
+        
+        /* -------------------------- */
+        /* تنسيقات واجهة الراكب */
+        /* -------------------------- */
+        #passenger-screen .map-placeholder {
+            height: 200px;
+            background-color: #e0e0e0;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            line-height: 200px;
+            font-weight: bold;
+            color: #666;
+        }
+        
+        /* -------------------------- */
+        /* تنسيقات واجهة السائق */
+        /* -------------------------- */
+        #driver-screen .status-button {
+            padding: 15px 30px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+        }
+        #driver-screen .request-card {
+            background-color: #fff3cd; /* لون تنبيهي */
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 2px solid #ffeeba;
+        }
+
+        /* -------------------------- */
+        /* تنسيقات لوحة التحكم (الويب) */
+        /* -------------------------- */
+        #admin-screen {
+            max-width: 900px;
+            background-color: #343a40;
+            color: white;
+            text-align: right;
+            margin: 20px auto;
+        }
+        #admin-screen h1 { color: #fff; }
+        #admin-screen h3 { color: #007bff; border-bottom: 1px solid #007bff; padding-bottom: 5px; }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-box {
+            background-color: #495057;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .live-map-placeholder {
+             height: 300px; 
+             background-color: #212529; 
+             line-height: 300px; 
+             text-align: center; 
+             border-radius: 8px;
+             margin-top: 10px;
+        }
+
+    </style>
 </head>
 <body>
 
-<div class="card">
-<h2 style="text-align:center">منصة التعليم</h2>
+<div id="login-screen" class="screen container">
+    <h2>تسجيل الدخول إلى نظام التاكسي</h2>
+    <p>اختر دورك للمتابعة</p>
 
-<select id="role">
-    <option value="teacher">مدرّس</option>
-    <option value="student">طالب</option>
-</select>
+    <input type="text" placeholder="البريد الإلكتروني أو رقم الهاتف" id="username">
+    <input type="password" placeholder="كلمة المرور" id="password">
+    
+    <button class="btn-primary" onclick="showRoleSelection()">تسجيل الدخول</button>
+</div>
 
-<input id="phone" placeholder="رقم الهاتف">
-<input id="pass" type="password" placeholder="كلمة المرور">
+<div id="role-screen" class="screen container">
+    <h2>أهلاً بك!</h2>
+    <p>يرجى اختيار دورك:</p>
+    
+    <button class="btn-role" onclick="showScreen('passenger-screen')">🚶‍♂️ الراكب (حجز الرحلات)</button>
+    <button class="btn-role" onclick="showScreen('driver-screen')">🚗 السائق (استقبال الرحلات)</button>
+    <button class="btn-role" onclick="showScreen('admin-screen')">🖥️ الإدارة (لوحة التحكم)</button>
+</div>
 
-<button onclick="login()">دخول</button>
+<div id="passenger-screen" class="screen container">
+    <h1>أين تريد الذهاب؟</h1>
+    <div class="map-placeholder">مكان الخريطة وتحديد الموقع [attachment_0](attachment)</div>
+    
+    <input type="text" placeholder="موقعك الحالي (نقطة الانطلاق)" id="pickup">
+    <input type="text" placeholder="وجهتك النهائية" id="destination">
+    
+    <p>تقدير الأجرة: **XX.XX** ريال/درهم</p>
+    
+    <button class="btn-primary" onclick="alert('تم طلب الرحلة!')">اطلب سيارة الآن</button>
+    <hr>
+    <p>السائق القريب: جاري البحث...</p>
+    <button onclick="showScreen('role-screen')" style="background-color: #ccc; width: auto; margin-top: 20px;">العودة</button>
+</div>
+
+<div id="driver-screen" class="screen container">
+    <h1>حالة السائق</h1>
+    <button class="status-button" onclick="alert('تم تفعيل وضع الاستعداد.')">متاح لاستقبال الرحلات</button>
+    
+    <div class="request-card" id="new-request">
+        <h3>🔔 طلب رحلة جديد! (صوت التنبيه هنا)</h3>
+        <p>من: **شارع الأمل**</p>
+        <p>إلى: **مركز المدينة التجاري**</p>
+        <p>الأجرة المقدرة: **45.00** ريال/درهم</p>
+        <button style="background-color: #ffc107; color: black; width: 45%;">قبول</button>
+        <button style="background-color: #dc3545; width: 45%;">رفض</button>
+    </div>
+    <button onclick="showScreen('role-screen')" style="background-color: #ccc; width: 90%; margin-top: 20px;">العودة</button>
+</div>
+
+<div id="admin-screen" class="screen">
+    <div style="padding: 20px;">
+        <div class="dashboard-header">
+            <h1>🖥️ لوحة التحكم الإدارية</h1>
+        </div>
+        
+        <h3>📊 ملخص الأداء</h3>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <h2>55</h2>
+                <p>سائق نشط حالياً</p>
+            </div>
+            <div class="stat-box">
+                <h2>128</h2>
+                <p>رحلة مكتملة اليوم</p>
+            </div>
+            <div class="stat-box">
+                <h2>$1,500</h2>
+                <p>إجمالي إيرادات اليوم</p>
+            </div>
+        </div>
+        
+        <h3>🗺️ مراقبة الخرائط المباشرة</h3>
+        <div class="live-map-placeholder">
+            
+        </div>
+        <button onclick="showScreen('role-screen')" style="background-color: #007bff; width: 100%; margin-top: 20px;">العودة</button>
+    </div>
 </div>
 
 <script>
-function login(){
-    let phone = document.getElementById("phone").value;
-    let pass  = document.getElementById("pass").value;
-    let role  = document.getElementById("role").value;
+    function showScreen(screenId) {
+        // إخفاء جميع الواجهات
+        const screens = document.querySelectorAll('.screen');
+        screens.forEach(screen => {
+            screen.style.display = 'none';
+        });
 
-    if(phone==="" || pass===""){
-        alert("أدخل جميع الحقول");
-        return;
+        // عرض الواجهة المطلوبة
+        document.getElementById(screenId).style.display = 'block';
     }
 
-    localStorage.setItem("userPhone", phone);
-    localStorage.setItem("userRole", role);
+    function showRoleSelection() {
+        // هذا مجرد محاكاة بسيطة لعملية تسجيل الدخول
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
 
-    // المدرّس
-    if(role === "teacher"){
-        window.location = "teacher.html";
-        return;
+        if (username && password) {
+            // في التطبيق الحقيقي، يتم هنا التحقق من السيرفر
+            showScreen('role-screen');
+        } else {
+            alert('يرجى إدخال اسم المستخدم وكلمة المرور.');
+        }
     }
-
-    // الطالب
-    if(role === "student"){
-        window.location = "student.html";
-        return;
-    }
-}
 </script>
 
 </body>
