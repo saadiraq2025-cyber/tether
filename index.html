@@ -3,399 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محاكاة تطبيق التاكسي (الراكب والسائق) - مع صوت</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
-    
+    <title>تطبيق دليفري - المطاعم</title>
     <style>
-        /* -------------------------- */
-        /* التنسيقات العامة والخطوط */
-        /* -------------------------- */
-        :root {
-            --primary-blue: #007bff; /* اللون الأساسي (الأزرق) */
-            --green-available: #28a745; /* اللون الأخضر (متاح) */
-            --bg-light: #f4f4f4;
-            --text-dark: #333;
-        }
-
+        /* CSS الأساسي للواجهة */
         body {
-            font-family: 'Cairo', sans-serif;
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: var(--bg-light);
-            color: var(--text-dark);
-            text-align: right;
-            direction: rtl;
+            background-color: #f4f4f4;
+            color: #333;
         }
-
-        .app-shell {
-            max-width: 450px; /* محاكاة شاشة الجوال */
-            height: 100vh;
-            margin: 0 auto;
-            background-color: white;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* إخفاء جميع الواجهات ما عدا تسجيل الدخول في البداية */
-        .screen {
-            display: none;
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-
-        /* -------------------------- */
-        /* تنسيقات الخريطة والمؤشرات */
-        /* -------------------------- */
-        .map-container {
-            height: 100%;
-            width: 100%;
-            /* محاكاة شكل الخريطة باستخدام صورة خلفية عامة */
-            background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/OpenStreetMap_Logo.svg/1200px-OpenStreetMap_Logo.svg.png');
-            background-color: #e9e9e9;
-            background-repeat: no-repeat;
-            background-size: cover; /* تغطية المساحة */
-            background-position: center;
-            position: relative;
-        }
-
-        .map-marker {
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            background-color: var(--primary-blue);
-            border: 4px solid white;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        .marker-start { top: 25%; right: 40%; background-color: #dc3545; }
-        .marker-end { top: 60%; right: 40%; background-color: var(--primary-blue); }
-        .marker-driver { top: 40%; right: 50%; width: 50px; height: 50px; background-color: transparent; border: none; }
-        .marker-driver i { font-size: 30px; color: var(--primary-blue); }
-
-
-        /* -------------------------- */
-        /* تنسيقات البطاقات السفلية (Sheet) */
-        /* -------------------------- */
-        .bottom-sheet {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            background: white;
-            border-top-left-radius: 20px;
-            border-top-right-radius: 20px;
-            box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            box-sizing: border-box;
-            max-height: 80%;
-            overflow-y: auto;
-            z-index: 10;
-        }
-
-        /* -------------------------- */
-        /* تنسيقات واجهة الراكب */
-        /* -------------------------- */
-        .search-input-box {
-            background-color: #f0f0f0;
-            border-radius: 10px;
-            padding: 10px 15px;
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .search-input-box i { color: #666; margin-left: 10px; }
-        .search-input-box input {
-            flex-grow: 1;
-            border: none;
-            background: transparent;
-            font-size: 1.1em;
-            padding: 5px 0;
-            text-align: right;
-            outline: none;
-        }
-        .trip-type-card {
-            border: 1px solid #ccc;
-            border-radius: 10px;
-            padding: 10px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-            transition: border-color 0.3s;
-        }
-        .trip-type-card:hover, .trip-type-card.selected { border-color: var(--primary-blue); border-width: 2px; }
-        .trip-details { text-align: right; }
-        .trip-details strong { display: block; font-size: 1.1em; color: var(--text-dark); }
-        .trip-price { font-size: 1.2em; font-weight: bold; color: var(--green-available); }
-
-        /* -------------------------- */
-        /* تنسيقات واجهة السائق */
-        /* -------------------------- */
-        #driver-screen .driver-controls {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            padding: 20px 0;
-            background-color: white;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-
-        .activation-button {
-            padding: 15px 50px;
-            background-color: var(--green-available);
+        .header {
+            background-color: #ff5722; /* لون برتقالي مميز */
             color: white;
-            border: none;
-            border-radius: 30px;
-            font-size: 1.3em;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(40, 167, 69, 0.5);
-        }
-
-        .driver-menu-bar {
-            position: absolute;
-            top: 0;
-            width: 100%;
-            background: white;
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-            z-index: 10;
-        }
-        .driver-menu-bar button {
-            background: none; border: none; color: #666; font-size: 0.8em; cursor: pointer; outline: none;
-        }
-        .driver-menu-bar i { font-size: 1.5em; display: block; margin-bottom: 3px; }
-
-        .new-request-alert {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 90%;
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            padding: 15px;
             text-align: center;
-            border: 4px solid var(--primary-blue);
-            z-index: 20;
-            animation: pulse 1s infinite;
+            font-size: 1.5em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .request-price { font-size: 2em; font-weight: bold; color: var(--green-available); margin: 15px 0; }
-        .request-actions button {
-            width: 45%; padding: 10px; margin: 5px; border-radius: 8px; font-size: 1.1em; font-weight: bold; color: white; border: none; cursor: pointer;
+        .container {
+            padding: 20px;
         }
-        .request-actions .accept { background-color: var(--green-available); }
-        .request-actions .reject { background-color: #dc3545; }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(0, 123, 255, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+        .restaurant-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            overflow: hidden;
+            transition: transform 0.2s;
+            cursor: pointer;
         }
-
-        /* -------------------------- */
-        /* تنسيقات لوحة التحكم (مختصرة) */
-        /* -------------------------- */
-        #admin-screen { background-color: #212529; color: white; padding: 20px; }
-        .admin-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px; }
-        .admin-stat { background-color: #343a40; padding: 15px; border-radius: 8px; text-align: center; }
+        .restaurant-card:hover {
+            transform: translateY(-5px);
+        }
+        .restaurant-card img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        .restaurant-info {
+            padding: 15px;
+        }
+        .restaurant-info h3 {
+            margin-top: 0;
+            color: #ff5722;
+        }
+        .badge {
+            background-color: #4CAF50;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            display: inline-block;
+        }
     </style>
 </head>
 <body>
 
-<audio id="notification-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-bell-notification-9.mp3" preload="auto"></audio>
-
-<div class="app-shell">
-    
-    <div id="role-screen" class="screen" style="display: block;">
-        <div class="bottom-sheet" style="height: 100%; border-radius: 0;">
-            <h2 style="text-align: center; color: var(--primary-blue); margin-top: 50px;">تسجيل الدخول للنظام</h2>
-            <div style="padding: 20px;">
-                <p style="text-align: center;">يرجى اختيار دورك للمحاكاة:</p>
-                <button class="activation-button" style="background-color: #007bff; margin-bottom: 15px;" onclick="showScreen('passenger-screen')">🚶‍♂️ دخول كراكب</button>
-                <button class="activation-button" style="background-color: #28a745; margin-bottom: 15px;" onclick="showScreen('driver-screen')">🚗 دخول كسائق</button>
-                <button class="activation-button" style="background-color: #6c757d;" onclick="showScreen('admin-screen')">🖥️ لوحة التحكم</button>
-            </div>
-        </div>
+    <div class="header">
+        <span>📍 موقعك الحالي</span>
+        <span>🍕 **تطبيق دليفري**</span>
+        <a href="cart.html" style="color: white; text-decoration: none;">🛒 سلة التسوق</a>
     </div>
 
+    <div class="container">
+        <h2>المطاعم القريبة منك</h2>
 
-    <div id="passenger-screen" class="screen">
-        <div class="map-container">
-            <div class="map-marker marker-start" style="top: 25%; right: 40%; border-radius: 0; transform: translate(-50%, -100%) rotate(45deg); width: 15px; height: 15px;"></div>
-            <div class="map-marker marker-end"></div>
-
-
-            <div class="bottom-sheet" style="height: auto; max-height: 90%;">
-                <p style="text-align: center; color: #999; margin-top: -10px;">انزلق للأعلى لإغلاق</p>
-                
-                <div class="search-input-box" onclick="showTripDetails()">
-                    <i class="fas fa-search"></i>
-                    <input type="text" placeholder="إلى أين تذهب" readonly>
+        <a href="menu.html" style="text-decoration: none; color: inherit;">
+            <div class="restaurant-card">
+                <img src="https://via.placeholder.com/400x150/ff7043/ffffff?text=مطعم+البيتزا" alt="مطعم بيتزا">
+                <div class="restaurant-info">
+                    <h3>مطعم بيتزا النجوم</h3>
+                    <p>أفضل بيتزا إيطالية في المدينة.</p>
+                    <span class="badge">وقت التوصيل: 30 دقيقة</span>
                 </div>
-
-                <p style="font-weight: bold; margin-bottom: 5px;">📍 بغداد، باب المعظم، شارع صافي الدين الحلي</p>
-                <p style="font-weight: bold; margin-bottom: 5px;">📍 بغداد، باب المعظم، شارع صافي الدين الحلي</p>
-                <button onclick="showScreen('role-screen')" style="background-color: #ccc; width: 100%; margin-top: 10px;">العودة</button>
             </div>
+        </a>
 
-            <div id="trip-details-sheet" class="bottom-sheet" style="height: auto; transform: translateY(100%); transition: transform 0.4s;">
-                <p style="text-align: center; color: #999; margin-top: -10px;" onclick="hideTripDetails()">عودة</p>
-                
-                <h3 style="margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px;">الوصول: بغداد، شارع السياب</h3>
-                
-                <div class="trip-type-card selected">
-                    <div class="trip-details"><strong>سوبر</strong><span>خيار الأفضل لانتظارك</span></div>
-                    <span class="trip-price">٥,٠٠٠ دينار</span>
-                    <i class="fas fa-car" style="color: #6c757d; font-size: 2em;"></i>
+        <a href="menu.html" style="text-decoration: none; color: inherit;">
+            <div class="restaurant-card">
+                <img src="https://via.placeholder.com/400x150/8bc34a/ffffff?text=محل+حلويات" alt="محل حلويات">
+                <div class="restaurant-info">
+                    <h3>حلويات الشام</h3>
+                    <p>تشكيلة واسعة من الحلويات الشرقية.</p>
+                    <span class="badge" style="background-color: #2196F3;">التقييم: 4.8 نجوم</span>
                 </div>
-                <div class="trip-type-card">
-                    <div class="trip-details"><strong>توفير</strong><span>رحلات ملائمة التكلفة</span></div>
-                    <span class="trip-price">٣,٠٠٠ دينار</span>
-                    <i class="fas fa-car-side" style="color: #6c757d; font-size: 2em;"></i>
-                </div>
-                
-                <button class="activation-button" style="width: 100%; margin-top: 15px; background-color: var(--primary-blue);" onclick="alert('جاري طلب رحلة سوبر...');">طلب رحلة سوبر</button>
-                <div class="promo-code" onclick="showScreen('role-screen')"><i class="fas fa-tag"></i> رمز الخصم / خيارات الرحلة</div>
             </div>
-        </div>
+        </a>
     </div>
-
-    <div id="driver-screen" class="screen">
-        <div class="map-container">
-            <div class="map-marker marker-driver">
-                <i class="fas fa-car-side"></i>
-            </div>
-            
-            <div class="driver-menu-bar">
-                <button onclick="showScreen('role-screen')"><i class="fas fa-sign-out-alt"></i> خروج</button>
-                <button><i class="fas fa-headset"></i> الدعم</button>
-                <button><i class="fas fa-medal"></i> الحوافز</button>
-                <button><i class="fas fa-envelope"></i> الرسائل</button>
-            </div>
-            
-            <div class="driver-controls" id="driver-status-control">
-                <button class="activation-button" style="background-color: var(--green-available);" onclick="showNewRequest()">اضغط هنا للتفعيل</button>
-            </div>
-
-            <div id="new-request-popup" class="new-request-alert" style="display: none;">
-                <h2>🔔 طلب جديد!</h2>
-                <div class="request-price">٢,٧٥٠ دينار</div>
-                
-                <div class="request-details">
-                    <p>مدة الوصول: <strong>٢ دقيقة - ٤ كم</strong></p>
-                    <p>من: <strong>بغداد، شارع فلسطين</strong></p>
-                    <p>إلى: <strong>بغداد، زيونة، شارع فلسطين</strong></p>
-                    <p style="font-size: 0.9em; color: #999;">الرحلة سوبر</p>
-                </div>
-                
-                <div class="request-actions">
-                    <button class="accept" onclick="acceptRequest()">قبول الرحلة سوبر</button>
-                    <button class="reject" onclick="rejectRequest()">رفض</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div id="admin-screen" class="screen">
-        <div style="padding: 20px;">
-            <h2 style="text-align: center; color: white;">🖥️ لوحة التحكم الإدارية</h2>
-            <div class="admin-grid">
-                <div class="admin-stat"><h3>55</h3><p>سائق نشط</p></div>
-                <div class="admin-stat"><h3>128</h3><p>رحلة مكتملة</p></div>
-            </div>
-            <h3 style="margin-top: 30px; text-align: right; color: #ffc107;">مراقبة الخريطة المباشرة</h3>
-            <div style="height: 300px; background-color: #333; border-radius: 10px; line-height: 300px; text-align: center; color: #999;">
-                
-            </div>
-            <button class="activation-button" style="background-color: #007bff; width: 100%; margin-top: 20px;" onclick="showScreen('role-screen')">العودة للصفحة الرئيسية</button>
-        </div>
-    </div>
-
-</div>
-
-<script>
-    // الحصول على عنصر الصوت
-    const notificationSound = document.getElementById('notification-sound');
-
-    // الدالة الرئيسية لعرض الشاشات
-    function showScreen(screenId) {
-        const screens = document.querySelectorAll('.screen');
-        screens.forEach(screen => {
-            screen.style.display = 'none';
-        });
-        document.getElementById(screenId).style.display = 'block';
-
-        // إيقاف الصوت عند مغادرة شاشة السائق
-        if (screenId !== 'driver-screen') {
-            document.getElementById('new-request-popup').style.display = 'none';
-            notificationSound.pause();
-            notificationSound.currentTime = 0; // إعادة الصوت للبداية
-        }
-        
-        // إعادة واجهة تفاصيل الرحلة في شاشة الراكب إلى حالتها الأصلية
-        const tripDetailsSheet = document.getElementById('trip-details-sheet');
-        if (tripDetailsSheet) {
-            tripDetailsSheet.style.transform = 'translateY(100%)';
-        }
-    }
-
-    // محاكاة لفتح شاشة تفاصيل الرحلة في واجهة الراكب
-    function showTripDetails() {
-        document.getElementById('trip-details-sheet').style.transform = 'translateY(0)';
-    }
-
-    // محاكاة لإغلاق شاشة تفاصيل الرحلة في واجهة الراكب
-    function hideTripDetails() {
-        document.getElementById('trip-details-sheet').style.transform = 'translateY(100%)';
-    }
-
-    // محاكاة لتشغيل صوت التنبيه وظهور طلب الرحلة الجديد للسائق
-    function showNewRequest() {
-        const popup = document.getElementById('new-request-popup');
-        popup.style.display = 'block';
-
-        // تشغيل الصوت
-        notificationSound.play().catch(error => {
-            // يتم عرض هذا الخطأ إذا لم يسمح المتصفح بالتشغيل التلقائي
-            console.warn("فشل تشغيل الصوت التلقائي: " + error);
-            alert("⚠️ لتشغيل الصوت في المتصفح، يرجى التفاعل مع الصفحة أولاً (مثل الضغط على أي زر مرة واحدة).");
-        });
-        
-        // إخفاء زر التفعيل بعد التنبيه
-        document.getElementById('driver-status-control').style.display = 'none';
-    }
-
-    // محاكاة لقبول الرحلة
-    function acceptRequest() {
-        notificationSound.pause();
-        notificationSound.currentTime = 0;
-        alert("تم قبول الرحلة! جاري التوجه نحو موقع الراكب...");
-        document.getElementById('new-request-popup').style.display = 'none';
-        // إعادة زر التفعيل
-        document.getElementById('driver-status-control').style.display = 'block';
-    }
-
-    // محاكاة لرفض الرحلة
-    function rejectRequest() {
-        notificationSound.pause();
-        notificationSound.currentTime = 0;
-        alert("تم رفض الرحلة.");
-        document.getElementById('new-request-popup').style.display = 'none';
-        // إعادة زر التفعيل
-        document.getElementById('driver-status-control').style.display = 'block';
-    }
-</script>
 
 </body>
 </html>
