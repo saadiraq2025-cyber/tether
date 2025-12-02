@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>قائمة - مطعم بيتزا النجوم</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; }
+        .header { background-color: #ff5722; color: white; padding: 15px; font-size: 1.5em; display: flex; align-items: center; }
+        .header a { color: white; text-decoration: none; margin-left: 10px; }
+        .container { padding: 20px; }
+        .menu-item {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .item-details h4 { margin-top: 0; color: #333; }
+        .price { color: #ff5722; font-weight: bold; font-size: 1.2em; }
+        .add-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .add-button:hover { background-color: #45a049; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <a href="index.html">🔙</a>
+        <span>🍕 قائمة - مطعم بيتزا النجوم</span>
+    </div>
+
+    <div class="container">
+        <h2>البيتزا الرئيسية</h2>
+
+        <div class="menu-item">
+            <div class="item-details">
+                <h4>بيتزا مارغريتا كلاسيك</h4>
+                <p>صلصة طماطم، جبنة موتزاريلا، أوراق ريحان طازجة.</p>
+                <span class="price">45 ريال</span>
+            </div>
+            <button class="add-button" onclick="addToCart('بيتزا مارغريتا')">أضف للسلة</button>
+        </div>
+
+        <div class="menu-item">
+            <div class="item-details">
+                <h4>بيتزا دجاج رانش</h4>
+                <p>قطع دجاج مشوي، صوص الرانش، جبنة، بصل.</p>
+                <span class="price">55 ريال</span>
+            </div>
+            <button class="add-button" onclick="addToCart('بيتزا دجاج رانش')">أضف للسلة</button>
+        </div>
+    </div>
+
+    <script>
+        function addToCart(itemName) {
+            alert(`تم إضافة "${itemName}" إلى السلة!`);
+            // في التطبيق الحقيقي، هنا يتم تحديث سلة التسوق في التخزين المحلي (LocalStorage)
+        }
+    </script>
+</body>
+</html>
