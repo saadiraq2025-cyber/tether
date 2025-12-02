@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سلة التسوق</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; }
+        .header { background-color: #ff5722; color: white; padding: 15px; font-size: 1.5em; display: flex; align-items: center; }
+        .header a { color: white; text-decoration: none; margin-left: 10px; }
+        .container { padding: 20px; }
+        .cart-item {
+            background-color: white;
+            border-bottom: 1px solid #eee;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .cart-summary {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .total-price {
+            font-size: 1.5em;
+            color: #ff5722;
+            font-weight: bold;
+        }
+        .checkout-button {
+            width: 100%;
+            background-color: #ff5722;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 1.2em;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        .checkout-button:hover { background-color: #e64a19; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <a href="index.html">🔙</a>
+        <span>🛒 سلة التسوق</span>
+    </div>
+
+    <div class="container">
+        <h2>محتويات السلة</h2>
+
+        <div class="cart-item">
+            <span>بيتزا مارغريتا كلاسيك (x1)</span>
+            <span>45 ريال</span>
+        </div>
+
+        <div class="cart-item">
+            <span>بيتزا دجاج رانش (x2)</span>
+            <span>110 ريال</span>
+        </div>
+
+        <div class="cart-summary">
+            <h3>ملخص الطلب</h3>
+            <div class="summary-row">
+                <span>المجموع الفرعي:</span>
+                <span>155 ريال</span>
+            </div>
+            <div class="summary-row">
+                <span>رسوم التوصيل:</span>
+                <span>10 ريال</span>
+            </div>
+            <hr>
+            <div class="summary-row total-price">
+                <span>المجموع الكلي:</span>
+                <span>165 ريال</span>
+            </div>
+
+            <button class="checkout-button" onclick="placeOrder()">إتمام عملية الشراء</button>
+        </div>
+    </div>
+
+    <script>
+        function placeOrder() {
+            alert("تم إرسال طلبك بنجاح! شكراً لك.");
+            // في التطبيق الحقيقي، يتم هنا إرسال البيانات إلى الخادم (Back-End)
+        }
+    </script>
+</body>
+</html>
