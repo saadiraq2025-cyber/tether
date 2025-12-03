@@ -1,98 +1,500 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تطبيق دليفري - المطاعم</title>
+    <meta charset="UTF-8" />
+    <title>Taxi Pulse - Driver Screen Clone</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Leaflet Map CSS -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+    />
+
     <style>
-        /* CSS الأساسي للواجهة */
-        body {
-            font-family: Arial, sans-serif;
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f4;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .app-frame {
+            width: 100%;
+            max-width: 414px; /* مقاس موبايل تقريبي */
+            height: 100vh;
+            max-height: 896px;
+            background: #ffffff;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+            border-radius: 26px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* شريط علوي */
+        .app-header {
+            height: 56px;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            border-bottom: 1px solid #eee;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .brand span {
+            color: #000;
+        }
+
+        .brand .brand-car {
+            width: 22px;
+            height: 14px;
+            border-radius: 10px;
+            background: #e53935;
+            position: relative;
+        }
+
+        .brand .brand-car::before,
+        .brand .brand-car::after {
+            content: "";
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #000;
+            bottom: -4px;
+        }
+
+        .brand .brand-car::before {
+            left: 3px;
+        }
+
+        .brand .brand-car::after {
+            right: 3px;
+        }
+
+        .menu-btn {
+            width: 28px;
+            height: 21px;
+            border-radius: 4px;
+            background: #e53935;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .menu-btn span {
+            width: 16px;
+            height: 2px;
+            border-radius: 999px;
+            background: #fff;
+        }
+
+        /* سويتش أونلاين */
+        .online-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
             color: #333;
         }
-        .header {
-            background-color: #ff5722; /* لون برتقالي مميز */
-            color: white;
-            padding: 15px;
-            text-align: center;
-            font-size: 1.5em;
+
+        .toggle-track {
+            width: 40px;
+            height: 20px;
+            border-radius: 999px;
+            background: #ddd;
+            position: relative;
+            padding: 2px;
+        }
+
+        .toggle-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #fff;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-track.on {
+            background: #e53935;
+        }
+
+        .toggle-track.on .toggle-thumb {
+            left: 22px;
+        }
+
+        /* الخريطة */
+        #map {
+            width: 100%;
+            height: 50%;
+        }
+
+        /* اللوحة السفلية */
+        .bottom-sheet {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+            padding: 14px 16px 18px;
+        }
+
+        .sheet-handle {
+            width: 36px;
+            height: 4px;
+            border-radius: 999px;
+            background: #e0e0e0;
+            margin: 0 auto 10px;
+        }
+
+        .sheet-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #f57c00;
+            margin-bottom: 4px;
+        }
+
+        .sheet-subtitle {
+            font-size: 12px;
+            color: #2e7d32;
+            margin-bottom: 8px;
+        }
+
+        .row {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 6px;
+            font-size: 12px;
         }
-        .container {
-            padding: 20px;
+
+        .row-label {
+            color: #757575;
         }
-        .restaurant-card {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 15px;
-            overflow: hidden;
-            transition: transform 0.2s;
+
+        .row-value {
+            font-weight: 600;
+            color: #212121;
+        }
+
+        .location-text {
+            font-size: 12px;
+            color: #424242;
+            margin: 8px 0;
+        }
+
+        .divider {
+            height: 1px;
+            background: #eee;
+            margin: 8px 0;
+        }
+
+        .driver-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .driver-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffb300, #f4511e);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .driver-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .driver-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #212121;
+        }
+
+        .driver-rating {
+            font-size: 11px;
+            color: #f9a825;
+        }
+
+        .driver-rating span {
+            color: #616161;
+        }
+
+        .view-link {
+            font-size: 11px;
+            color: #1976d2;
+        }
+
+        .verify-code {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .verify-code input {
+            flex: 1;
+            padding: 8px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            outline: none;
+        }
+
+        .verify-code input:focus {
+            border-color: #e53935;
+        }
+
+        .buttons-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            flex: 1;
+            border-radius: 6px;
+            padding: 10px 0;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            border: none;
+            outline: none;
             cursor: pointer;
         }
-        .restaurant-card:hover {
-            transform: translateY(-5px);
+
+        .btn-call {
+            background: #ffffff;
+            border: 1px solid #4caf50;
+            color: #388e3c;
         }
-        .restaurant-card img {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
+
+        .btn-main {
+            background: #e53935;
+            color: #ffffff;
         }
-        .restaurant-info {
-            padding: 15px;
+
+        .btn-main.end {
+            background: #d32f2f;
         }
-        .restaurant-info h3 {
-            margin-top: 0;
-            color: #ff5722;
+
+        .eta-text {
+            font-size: 11px;
+            color: #616161;
+            margin-top: 6px;
         }
-        .badge {
-            background-color: #4CAF50;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 0.8em;
-            display: inline-block;
+
+        @media (max-width: 480px) {
+            .app-frame {
+                border-radius: 0;
+                height: 100vh;
+                max-height: none;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="app-frame">
+        <!-- رأس التطبيق -->
+        <div class="app-header">
+            <div class="brand">
+                <span>Taxi</span>
+                <div class="brand-car"></div>
+                <span>Pulse</span>
+            </div>
 
-    <div class="header">
-        <span>📍 موقعك الحالي</span>
-        <span>🍕 **تطبيق دليفري**</span>
-        <a href="cart.html" style="color: white; text-decoration: none;">🛒 سلة التسوق</a>
-    </div>
-
-    <div class="container">
-        <h2>المطاعم القريبة منك</h2>
-
-        <a href="menu.html" style="text-decoration: none; color: inherit;">
-            <div class="restaurant-card">
-                <img src="https://via.placeholder.com/400x150/ff7043/ffffff?text=مطعم+البيتزا" alt="مطعم بيتزا">
-                <div class="restaurant-info">
-                    <h3>مطعم بيتزا النجوم</h3>
-                    <p>أفضل بيتزا إيطالية في المدينة.</p>
-                    <span class="badge">وقت التوصيل: 30 دقيقة</span>
+            <div class="online-toggle" onclick="toggleOnline()">
+                <span id="onlineLabel">Online</span>
+                <div id="toggleTrack" class="toggle-track on">
+                    <div class="toggle-thumb"></div>
                 </div>
             </div>
-        </a>
 
-        <a href="menu.html" style="text-decoration: none; color: inherit;">
-            <div class="restaurant-card">
-                <img src="https://via.placeholder.com/400x150/8bc34a/ffffff?text=محل+حلويات" alt="محل حلويات">
-                <div class="restaurant-info">
-                    <h3>حلويات الشام</h3>
-                    <p>تشكيلة واسعة من الحلويات الشرقية.</p>
-                    <span class="badge" style="background-color: #2196F3;">التقييم: 4.8 نجوم</span>
+            <!-- زر منيو أحمر مثل الصورة -->
+            <!-- يمكن تحويله لاحقاً لفتح قائمة جانبية -->
+            <!--
+            <div class="menu-btn">
+                <span></span><span></span><span></span>
+            </div>
+            -->
+        </div>
+
+        <!-- خريطة -->
+        <div id="map"></div>
+
+        <!-- اللوحة السفلية -->
+        <div class="bottom-sheet">
+            <div class="sheet-handle"></div>
+
+            <div class="sheet-title" id="sheetTitle">Taxi Service</div>
+            <div class="sheet-subtitle" id="sheetSubtitle">
+                Time to reach Destination : 2 min
+            </div>
+
+            <div class="row">
+                <div>
+                    <span class="row-label">Trip id</span><br />
+                    <span class="row-value">0123458785</span>
+                </div>
+                <div style="text-align:right;">
+                    <span class="row-label">Fare Estimate</span><br />
+                    <span class="row-value">$20</span>
                 </div>
             </div>
-        </a>
+
+            <div class="location-text">
+                Sir Ali Muslim Club Hal<br />
+                Madina mall, Eastleigh First Ave
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="driver-info">
+                <div class="driver-left">
+                    <div class="avatar">J</div>
+                    <div class="driver-text">
+                        <span class="driver-name">John Mathew</span>
+                        <span class="driver-rating">★ 4.5 <span>(120 trips)</span></span>
+                    </div>
+                </div>
+                <div class="view-link">View More</div>
+            </div>
+
+            <div class="verify-code">
+                <input
+                    type="text"
+                    placeholder="Enter Passenger Verification Code"
+                    id="codeInput"
+                />
+            </div>
+
+            <div class="buttons-row">
+                <button class="btn btn-call" onclick="callPassenger()">Call</button>
+                <button class="btn btn-main" id="mainBtn" onclick="toggleTrip()">
+                    Start Trip
+                </button>
+            </div>
+
+            <div class="eta-text" id="etaText">
+                Tap "Start Trip" when the passenger is on board.
+            </div>
+        </div>
     </div>
 
+    <!-- Leaflet JS -->
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""
+    ></script>
+
+    <script>
+        // خريطة
+        const map = L.map("map").setView([33.3152, 44.3661], 13); // بغداد مثالاً
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+        }).addTo(map);
+
+        const pickup = L.marker([33.3185, 44.361]).addTo(map);
+        const driver = L.marker([33.311, 44.37], {
+            title: "Driver",
+        }).addTo(map);
+
+        const routeLine = L.polyline(
+            [
+                pickup.getLatLng(),
+                driver.getLatLng(),
+            ],
+            { dashArray: "5,8" }
+        ).addTo(map);
+
+        map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+
+        // حالة السويتش أونلاين / أوفلاين
+        let online = true;
+        function toggleOnline() {
+            online = !online;
+            const track = document.getElementById("toggleTrack");
+            const label = document.getElementById("onlineLabel");
+            if (online) {
+                track.classList.add("on");
+                label.textContent = "Online";
+            } else {
+                track.classList.remove("on");
+                label.textContent = "Offline";
+            }
+        }
+
+        // حالة الرحلة
+        let tripStarted = false;
+        function toggleTrip() {
+            const btn = document.getElementById("mainBtn");
+            const title = document.getElementById("sheetTitle");
+            const sub = document.getElementById("sheetSubtitle");
+            const eta = document.getElementById("etaText");
+
+            if (!tripStarted) {
+                tripStarted = true;
+                btn.textContent = "End Trip";
+                btn.classList.add("end");
+                title.textContent = "Trip In Progress";
+                sub.textContent = "Distance and time are being tracked";
+                eta.textContent = "Tap \"End Trip\" when you reach the destination.";
+            } else {
+                tripStarted = false;
+                btn.textContent = "Start Trip";
+                btn.classList.remove("end");
+                title.textContent = "Taxi Service";
+                sub.textContent = "Time to reach Destination : 2 min";
+                eta.textContent =
+                    "Trip finished. Wait for the next ride request.";
+            }
+        }
+
+        function callPassenger() {
+            alert("Here you can open phone dialer in the real app.");
+        }
+    </script>
 </body>
 </html>
