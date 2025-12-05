@@ -41,6 +41,7 @@
             text-align: center;
             margin-bottom: 20px;
             line-height: 1.4;
+            min-height: 80px;
         }
 
         /* حاوية الخيارات */
@@ -108,15 +109,34 @@
         .correct {
             background-color: #2ecc71 !important; /* أخضر */
             border-color: #27ae60 !important;
+        }
+
+        .correct .option-text {
             color: white;
         }
-        
-        .correct .option-text { color: white; }
 
         .wrong {
             background-color: #e74c3c !important; /* أحمر */
             border-color: #c0392b !important;
             opacity: 0.7;
+        }
+
+        /* زر التالي */
+        .next-btn {
+            margin-top: 15px;
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            font-weight: 800;
+            border-radius: 15px;
+            border: 3px solid #000;
+            background-color: #ffffff;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .next-btn:hover {
+            transform: scale(1.02);
         }
 
         /* تأثيرات زخرفية للخلفية (دوائر باهتة) */
@@ -126,8 +146,20 @@
             border-radius: 50%;
             z-index: 0;
         }
-        .circle-1 { width: 200px; height: 200px; top: -50px; left: -50px; }
-        .circle-2 { width: 150px; height: 150px; bottom: 50px; right: -30px; }
+
+        .circle-1 {
+            width: 200px;
+            height: 200px;
+            top: -50px;
+            left: -50px;
+        }
+
+        .circle-2 {
+            width: 150px;
+            height: 150px;
+            bottom: 50px;
+            right: -30px;
+        }
 
         /* لضمان بقاء المحتوى فوق الخلفية الزخرفية */
         .content-wrapper {
@@ -138,6 +170,13 @@
             flex-direction: column;
         }
 
+        .footer-text {
+            text-align: center;
+            font-size: 14px;
+            font-weight: 700;
+            margin-top: 5px;
+            color: #2c3e50;
+        }
     </style>
 </head>
 <body>
@@ -147,8 +186,8 @@
         <div class="bg-decoration circle-2"></div>
 
         <div class="content-wrapper">
-            <div class="question">
-                ما هو الشيء الذي يستطيع رفع أثقل الأشياء ولا يستطيع رفع مسمار ؟
+            <div class="question" id="questionText">
+                <!-- يُضاف النص من الجافاسكربت -->
             </div>
 
             <div class="timer-container">
@@ -156,48 +195,514 @@
             </div>
             <br>
 
-            <div class="options-container">
-                <div class="option-btn" onclick="checkAnswer(this, false)">
-                    <img src="https://cdn-icons-png.flaticon.com/512/2311/2311451.png" class="option-img" alt="شاحنة">
-                    <span class="option-text">الشاحنة</span>
-                </div>
-
-                <div class="option-btn" id="correctAnswer" onclick="checkAnswer(this, true)">
-                    <img src="https://cdn-icons-png.flaticon.com/512/2867/2867882.png" class="option-img" alt="البحر">
-                    <span class="option-text">البحر</span>
-                </div>
-
-                <div class="option-btn" onclick="checkAnswer(this, false)">
-                    <img src="https://cdn-icons-png.flaticon.com/512/2548/2548530.png" class="option-img" alt="لاعب أجسام">
-                    <span class="option-text">لاعب أجسام</span>
-                </div>
+            <div class="options-container" id="optionsContainer">
+                <!-- تُضاف الخيارات من الجافاسكربت -->
             </div>
+
+            <button class="next-btn" id="nextBtn">السؤال التالي ▶</button>
+            <div class="footer-text" id="counterText"></div>
         </div>
     </div>
 
     <script>
+        // أيقونات عامة نستخدمها لكل الخيارات
+        const icon1 = "https://cdn-icons-png.flaticon.com/512/2311/2311451.png";
+        const icon2 = "https://cdn-icons-png.flaticon.com/512/2867/2867882.png";
+        const icon3 = "https://cdn-icons-png.flaticon.com/512/2548/2548530.png";
+
+        // ٥٠ سؤال وجواب (كل عنصر: سؤال + ٣ خيارات واحد صحيح)
+        const questions = [
+            {
+                q: "ما هو الشيء الذي يستطيع رفع أثقل الأشياء ولا يستطيع رفع مسمار ؟",
+                options: [
+                    { text: "الشاحنة", img: icon1, correct: false },
+                    { text: "البحر", img: icon2, correct: true },
+                    { text: "لاعب أجسام", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي له رقبة بلا رأس ؟",
+                options: [
+                    { text: "الزجاجة", img: icon2, correct: true },
+                    { text: "القميص", img: icon1, correct: false },
+                    { text: "العصا", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي يسمع بلا أذن ويتكلم بلا لسان ؟",
+                options: [
+                    { text: "الهاتف", img: icon1, correct: true },
+                    { text: "الراديو", img: icon2, correct: false },
+                    { text: "الكتاب", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي كلما أخذت منه كبر ؟",
+                options: [
+                    { text: "الحفرة", img: icon2, correct: true },
+                    { text: "العمر", img: icon1, correct: false },
+                    { text: "المال", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي له أسنان ولا يعض ؟",
+                options: [
+                    { text: "المشط", img: icon3, correct: true },
+                    { text: "الكلب", img: icon1, correct: false },
+                    { text: "المنشار", img: icon2, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي يمشي بلا قدمين ؟",
+                options: [
+                    { text: "الوقت", img: icon2, correct: true },
+                    { text: "القطار", img: icon1, correct: false },
+                    { text: "النهر", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي يكتب ولا يقرأ ؟",
+                options: [
+                    { text: "القلم", img: icon1, correct: true },
+                    { text: "الكتاب", img: icon2, correct: false },
+                    { text: "اللوح", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي يقرصك ولا تراه ؟",
+                options: [
+                    { text: "البرد", img: icon3, correct: true },
+                    { text: "الدبور", img: icon1, correct: false },
+                    { text: "الإبرة", img: icon2, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي له قلب لا ينبض ؟",
+                options: [
+                    { text: "الخس", img: icon2, correct: true },
+                    { text: "الحجر", img: icon1, correct: false },
+                    { text: "الساعة", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي إذا جاع كذب وإذا شبع صدق ؟",
+                options: [
+                    { text: "الساعة", img: icon1, correct: true },
+                    { text: "الميزان", img: icon2, correct: false },
+                    { text: "الطفل", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "شيء تراه في الليل ثلاث مرات وفي النهار مرة واحدة، ما هو ؟",
+                options: [
+                    { text: "حرف اللام", img: icon1, correct: true },
+                    { text: "القمر", img: icon2, correct: false },
+                    { text: "النجوم", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي كلما زاد نقص ؟",
+                options: [
+                    { text: "العمر", img: icon2, correct: true },
+                    { text: "المال", img: icon1, correct: false },
+                    { text: "العلم", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي لا يمشي إلا بالضرب ؟",
+                options: [
+                    { text: "المسمار", img: icon3, correct: true },
+                    { text: "الحصان", img: icon1, correct: false },
+                    { text: "الطبل", img: icon2, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي إذا دخل الماء لا يبتل ؟",
+                options: [
+                    { text: "الظل", img: icon2, correct: true },
+                    { text: "الحجر", img: icon1, correct: false },
+                    { text: "السفينة", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي إذا أكلته كله لا تشبع وإذا أكلت نصفه تشبع ؟",
+                options: [
+                    { text: "البطيخ", img: icon3, correct: false },
+                    { text: "الخبز", img: icon2, correct: false },
+                    { text: "نصف كلمة جوع (جو)", img: icon1, correct: true }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي يولد مرة واحدة ثم يموت مرة واحدة ؟",
+                options: [
+                    { text: "الإنسان", img: icon1, correct: true },
+                    { text: "القمر", img: icon2, correct: false },
+                    { text: "الشمس", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي يدخل الأذن ولا يسمع ؟",
+                options: [
+                    { text: "الصوت", img: icon2, correct: true },
+                    { text: "الهواء", img: icon1, correct: false },
+                    { text: "الماء", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي إذا لمسته صاح ؟",
+                options: [
+                    { text: "الجرس", img: icon1, correct: true },
+                    { text: "الطفل", img: icon2, correct: false },
+                    { text: "الهاتف", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي يطير بلا جناحين ويبكي بلا عينين ؟",
+                options: [
+                    { text: "السحاب", img: icon2, correct: true },
+                    { text: "الريح", img: icon1, correct: false },
+                    { text: "الطائرة", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "بيت لا باب له ولا نوافذ، ما هو ؟",
+                options: [
+                    { text: "بيت الشعر", img: icon1, correct: true },
+                    { text: "الكوخ", img: icon2, correct: false },
+                    { text: "الخيمة", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي إذا زاد عن حده انقلب ضده ؟",
+                options: [
+                    { text: "الضحك", img: icon3, correct: false },
+                    { text: "النوم", img: icon1, correct: false },
+                    { text: "كل شيء", img: icon2, correct: true }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي إذا كسرته لا تسمع له صوتاً ؟",
+                options: [
+                    { text: "الصمت", img: icon2, correct: true },
+                    { text: "الزجاج", img: icon1, correct: false },
+                    { text: "القلم", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي تراه ولا يراك ؟",
+                options: [
+                    { text: "المرآة", img: icon1, correct: false },
+                    { text: "الصورة", img: icon2, correct: true },
+                    { text: "التلفاز", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي اسمه على لونه ؟",
+                options: [
+                    { text: "البرتقال", img: icon2, correct: false },
+                    { text: "الذهب", img: icon1, correct: false },
+                    { text: "البيض", img: icon3, correct: true }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي ينام مرتدياً حذاءه ؟",
+                options: [
+                    { text: "الحصان", img: icon1, correct: true },
+                    { text: "الطيور", img: icon2, correct: false },
+                    { text: "الكلب", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "شيء إذا أضفت له نقطة أصبح ثقيل، ما هو ؟",
+                options: [
+                    { text: "الحمل", img: icon2, correct: false },
+                    { text: "الحبل", img: icon3, correct: false },
+                    { text: "الحمل ← جمل", img: icon1, correct: true }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي كلما غسلوه اتسخ أكثر ؟",
+                options: [
+                    { text: "الملابس", img: icon1, correct: false },
+                    { text: "الماء", img: icon2, correct: true },
+                    { text: "السيارة", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي لا يُكسر مهما ضربته ؟",
+                options: [
+                    { text: "الظل", img: icon2, correct: false },
+                    { text: "الماء", img: icon3, correct: false },
+                    { text: "الضوء", img: icon1, correct: true }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي يعيش في الشتاء ثلاث مرات وفي الصيف مرة ؟",
+                options: [
+                    { text: "حرف الشين", img: icon1, correct: true },
+                    { text: "الثلج", img: icon2, correct: false },
+                    { text: "المطر", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي يركض ولا يتعب ؟",
+                options: [
+                    { text: "الماء في النهر", img: icon2, correct: true },
+                    { text: "الحصان", img: icon1, correct: false },
+                    { text: "الإنسان", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي يدخل الجميع ولا يدخله أحد ؟",
+                options: [
+                    { text: "المدرسة", img: icon1, correct: false },
+                    { text: "البيت", img: icon2, correct: false },
+                    { text: "القبر", img: icon3, correct: true }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي إذا ذكرته كسرته ؟",
+                options: [
+                    { text: "القانون", img: icon1, correct: false },
+                    { text: "الصمت", img: icon2, correct: true },
+                    { text: "القلب", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "شيء إذا أكلته نافع وإذا لبسته شانع، ما هو ؟",
+                options: [
+                    { text: "التمر", img: icon2, correct: false },
+                    { text: "العسل", img: icon3, correct: false },
+                    { text: "الثوم", img: icon1, correct: true }
+                ]
+            },
+            {
+                q: "ما هو الباب الذي لا يمكن فتحه أبداً ؟",
+                options: [
+                    { text: "باب المستقبل", img: icon2, correct: false },
+                    { text: "الباب المفتوح", img: icon3, correct: false },
+                    { text: "الباب المرسوم", img: icon1, correct: true }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي له عين ولا يرى ؟",
+                options: [
+                    { text: "الإبرة", img: icon1, correct: true },
+                    { text: "العاصفة", img: icon2, correct: false },
+                    { text: "القدر", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي إذا وضعت فيه الماء لا يبتل ؟",
+                options: [
+                    { text: "الزجاج", img: icon3, correct: false },
+                    { text: "الإناء", img: icon2, correct: false },
+                    { text: "الظل", img: icon1, correct: true }
+                ]
+            },
+            {
+                q: "له أوراق وليس نباتاً، له جلد وليس حيواناً، له علم وليس إنساناً، ما هو ؟",
+                options: [
+                    { text: "الكتاب", img: icon2, correct: true },
+                    { text: "الدفتر", img: icon1, correct: false },
+                    { text: "الهاتف", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "شيء كلما ارتفع قلّ، ما هو ؟",
+                options: [
+                    { text: "صوتك", img: icon1, correct: false },
+                    { text: "ضغط الهواء", img: icon2, correct: true },
+                    { text: "الحرارة", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "شيء إذا وضعته في الثلاجة لا يبرد، ما هو ؟",
+                options: [
+                    { text: "الضوء", img: icon1, correct: true },
+                    { text: "الماء", img: icon2, correct: false },
+                    { text: "الهواء", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي لا يبتل حتى لو وُضع في الماء ؟",
+                options: [
+                    { text: "الورق", img: icon3, correct: false },
+                    { text: "السمك", img: icon2, correct: false },
+                    { text: "الظل", img: icon1, correct: true }
+                ]
+            },
+            {
+                q: "شيء يقف في المنتصف دائماً، ما هو ؟",
+                options: [
+                    { text: "حرف الميم في كلمة (أمتوسط)", img: icon1, correct: false },
+                    { text: "حرف الدال في (غداء)", img: icon2, correct: false },
+                    { text: "حرف الدال في كلمة (غدًا)", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي لا يدخل النار ولا الماء ؟",
+                options: [
+                    { text: "الرماد", img: icon2, correct: false },
+                    { text: "الظل", img: icon1, correct: true },
+                    { text: "الهواء", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي اسمه مكون من أربعة أحرف، إذا أكلته كله تموت، وإذا أكلت نصفه تعيش ؟",
+                options: [
+                    { text: "سمسم", img: icon3, correct: false },
+                    { text: "سمك", img: icon2, correct: false },
+                    { text: "سمّ", img: icon1, correct: true }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي إذا مرّ على الزجاج لم يكسره، وإذا مرّ على الحجر كسره ؟",
+                options: [
+                    { text: "الريح", img: icon2, correct: false },
+                    { text: "الصوت", img: icon3, correct: false },
+                    { text: "الماء", img: icon1, correct: true }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي كلما أخذت منه ازداد ؟",
+                options: [
+                    { text: "العلم", img: icon2, correct: true },
+                    { text: "المال", img: icon1, correct: false },
+                    { text: "الوقت", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "شيء له عينان ولا يرى، ما هو ؟",
+                options: [
+                    { text: "الزر", img: icon3, correct: false },
+                    { text: "الصورة", img: icon2, correct: false },
+                    { text: "الدمعة", img: icon1, correct: true }
+                ]
+            },
+            {
+                q: "شيء إذا تكلمت عنه اختفى، ما هو ؟",
+                options: [
+                    { text: "السر", img: icon2, correct: false },
+                    { text: "الصمت", img: icon1, correct: true },
+                    { text: "الحلم", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "شيء إذا لمسته احترقت، ما هو ؟",
+                options: [
+                    { text: "النار", img: icon1, correct: true },
+                    { text: "الماء الساخن", img: icon2, correct: false },
+                    { text: "الشمس", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي يكسو الناس وهو عارٍ ؟",
+                options: [
+                    { text: "الإبرة", img: icon1, correct: true },
+                    { text: "الخياط", img: icon2, correct: false },
+                    { text: "القماش", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "شيء إن تركته ذهب وإن احتجته رجع، ما هو ؟",
+                options: [
+                    { text: "الصدى", img: icon2, correct: false },
+                    { text: "الظل", img: icon3, correct: false },
+                    { text: "الشعر", img: icon1, correct: true }
+                ]
+            },
+            {
+                q: "ما هو الشيء الذي يزيد ولا ينقص أبداً ؟",
+                options: [
+                    { text: "العمر", img: icon2, correct: true },
+                    { text: "المال", img: icon1, correct: false },
+                    { text: "الوزن", img: icon3, correct: false }
+                ]
+            },
+            {
+                q: "شيء موجود في السماء وليس في الماء، ما هو ؟",
+                options: [
+                    { text: "حرف السين", img: icon1, correct: true },
+                    { text: "النجوم", img: icon2, correct: false },
+                    { text: "القمر", img: icon3, correct: false }
+                ]
+            }
+        ];
+
         const progressBar = document.getElementById('progressBar');
-        const correctOption = document.getElementById('correctAnswer');
+        const questionText = document.getElementById('questionText');
+        const optionsContainer = document.getElementById('optionsContainer');
+        const nextBtn = document.getElementById('nextBtn');
+        const counterText = document.getElementById('counterText');
+
         let gameActive = true;
         let progress = 0;
         const totalTime = 5000; // 5 ثواني
         const intervalTime = 50; // تحديث كل 50 ملي ثانية
+        let timer = null;
+        let currentIndex = 0;
+        let correctOptionElement = null;
 
-        // دالة تشغيل المؤقت
-        const timer = setInterval(() => {
-            if (!gameActive) {
-                clearInterval(timer);
-                return;
-            }
+        // تحميل سؤال معين
+        function loadQuestion(index) {
+            const q = questions[index];
+            questionText.textContent = q.q;
+            counterText.textContent = "السؤال " + (index + 1) + " من " + questions.length;
 
-            progress += (intervalTime / totalTime) * 100;
-            progressBar.style.width = progress + '%';
+            optionsContainer.innerHTML = "";
+            correctOptionElement = null;
 
-            if (progress >= 100) {
-                clearInterval(timer);
-                revealAnswer(); // كشف الإجابة عند انتهاء الوقت
-            }
-        }, intervalTime);
+            q.options.forEach(opt => {
+                const btn = document.createElement('div');
+                btn.className = 'option-btn';
+
+                const img = document.createElement('img');
+                img.src = opt.img;
+                img.alt = opt.text;
+                img.className = 'option-img';
+
+                const span = document.createElement('span');
+                span.className = 'option-text';
+                span.textContent = opt.text;
+
+                btn.appendChild(img);
+                btn.appendChild(span);
+
+                btn.onclick = () => checkAnswer(btn, opt.correct);
+
+                optionsContainer.appendChild(btn);
+
+                if (opt.correct) {
+                    correctOptionElement = btn;
+                }
+            });
+
+            resetTimer();
+        }
+
+        // إعادة ضبط المؤقت
+        function resetTimer() {
+            clearInterval(timer);
+            progress = 0;
+            progressBar.style.width = '0%';
+            gameActive = true;
+
+            timer = setInterval(() => {
+                if (!gameActive) {
+                    clearInterval(timer);
+                    return;
+                }
+
+                progress += (intervalTime / totalTime) * 100;
+                progressBar.style.width = progress + '%';
+
+                if (progress >= 100) {
+                    clearInterval(timer);
+                    revealAnswer(); // كشف الإجابة عند انتهاء الوقت
+                }
+            }, intervalTime);
+        }
 
         // دالة التحقق من الإجابة عند النقر
         function checkAnswer(element, isCorrect) {
@@ -209,17 +714,45 @@
             } else {
                 element.classList.add('wrong');
                 // إظهار الإجابة الصحيحة أيضاً
-                setTimeout(() => {
-                    correctOption.classList.add('correct');
-                }, 300);
+                if (correctOptionElement) {
+                    setTimeout(() => {
+                        correctOptionElement.classList.add('correct');
+                    }, 300);
+                }
             }
         }
 
         // دالة كشف الإجابة تلقائياً عند انتهاء الوقت
         function revealAnswer() {
             gameActive = false;
-            correctOption.classList.add('correct');
+            if (correctOptionElement) {
+                correctOptionElement.classList.add('correct');
+            }
         }
+
+        // الانتقال إلى السؤال التالي
+        function nextQuestion() {
+            if (currentIndex < questions.length - 1) {
+                currentIndex++;
+                loadQuestion(currentIndex);
+            } else {
+                // انتهت الأسئلة
+                clearInterval(timer);
+                questionText.textContent = "انتهت جميع الألغاز! أحسنت 👏🎉";
+                optionsContainer.innerHTML = "";
+                progressBar.style.width = "100%";
+                nextBtn.disabled = true;
+                nextBtn.textContent = "انتهى اللعب";
+                counterText.textContent = "عدد الألغاز: " + questions.length;
+            }
+        }
+
+        nextBtn.addEventListener('click', nextQuestion);
+
+        // عند تحميل الصفحة نبدأ بالسؤال الأول
+        window.onload = function () {
+            loadQuestion(0);
+        };
     </script>
 </body>
 </html>
