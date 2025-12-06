@@ -3,28 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سعد بوك | SaadBook</title>
+    <title>سعد بوك | SaadBook - مع التفاعل</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* CSS بسيط لتحديد الشكل والمظهر */
+        /* ================================================= */
+        /* CSS: التصميم والمظهر */
+        /* ================================================= */
         :root {
-            --main-blue: #1877f2; /* لون فيسبوك الأزرق */
+            --main-blue: #1877f2;
             --light-bg: #f0f2f5;
             --text-color: #050505;
+            --post-bg: #fff;
+            --like-red: #fa383e;
         }
 
         body {
             font-family: 'Arial', sans-serif;
             background-color: var(--light-bg);
             margin: 0;
-            padding-top: 56px; /* لإعطاء مساحة للشريط العلوي الثابت */
+            padding-top: 56px;
             direction: rtl; /* لدعم اللغة العربية */
         }
 
-        /* شريط التنقل العلوي */
+        /* الشريط العلوي الثابت */
         .header {
             width: 100%;
             height: 56px;
-            background-color: #fff;
+            background-color: var(--post-bg);
             border-bottom: 1px solid #ddd;
             display: flex;
             justify-content: space-between;
@@ -49,6 +54,7 @@
             border-radius: 20px;
             outline: none;
             text-align: right;
+            background-color: var(--light-bg);
         }
 
         /* هيكل الصفحة الرئيسي */
@@ -58,36 +64,38 @@
             margin: 20px auto;
         }
 
-        /* الأشرطة الجانبية */
+        /* الأشرطة الجانبية والمحتوى الرئيسي */
         .sidebar {
-            flex-basis: 20%;
+            flex-basis: 25%; /* زادت قليلاً لتبدو أفضل */
             padding: 10px;
             box-sizing: border-box;
+            position: sticky;
+            top: 76px;
+            height: fit-content;
         }
         
+        .main-content {
+            flex-basis: 50%;
+            padding: 0 15px;
+        }
+
         /* قائمة التنقل الجانبية */
         .nav-link {
-            display: block;
+            display: flex;
+            align-items: center;
             padding: 10px;
             margin-bottom: 5px;
             color: var(--text-color);
             text-decoration: none;
             border-radius: 6px;
         }
+        .nav-link i { margin-left: 10px; }
 
-        .nav-link:hover {
-            background-color: #ebebeb;
-        }
-
-        /* منطقة المحتوى الرئيسية (News Feed) */
-        .main-content {
-            flex-basis: 60%;
-            padding: 0 15px;
-        }
+        .nav-link:hover { background-color: #ebebeb; }
 
         /* بطاقة المنشورات (Post Card) */
-        .post-card {
-            background-color: #fff;
+        .post-card, .create-post-card, .widget-card {
+            background-color: var(--post-bg);
             border-radius: 8px;
             margin-bottom: 15px;
             padding: 15px;
@@ -105,82 +113,307 @@
             height: 40px;
             border-radius: 50%;
             background-color: #ccc;
-            margin-left: 10px; /* مسافة لليسار في RTL */
+            margin-left: 10px;
         }
 
-        .post-user-info strong {
-            display: block;
+        .post-user-info strong { display: block; }
+        .post-user-info small { color: #606770; }
+
+        /* منطقة التفاعل (الإعجاب والتعليق) */
+        .post-actions {
+            display: flex;
+            justify-content: space-around;
+            border-top: 1px solid #f0f2f5;
+            padding-top: 10px;
+            margin-top: 10px;
         }
 
-        .post-body p {
-            line-height: 1.5;
-            margin: 0;
+        .action-button {
+            background: none;
+            border: none;
+            color: #606770;
+            padding: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            transition: color 0.2s;
+        }
+        .action-button i { margin-left: 5px; }
+        .action-button:hover { background-color: var(--light-bg); border-radius: 4px; }
+        
+        /* حالة الإعجاب (عند النقر عليها) */
+        .action-button.liked { color: var(--main-blue); }
+
+        /* تصميم صندوق النشر */
+        .create-post-card textarea {
+            width: 100%;
+            height: 80px;
+            border: none;
+            border-bottom: 1px solid #ddd;
+            padding: 10px;
+            box-sizing: border-box;
+            resize: none;
+            outline: none;
+            font-size: 16px;
+        }
+        .post-button {
+            background-color: var(--main-blue);
+            color: #fff;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+        }
+
+        /* صندوق تسجيل الدخول (محاكاة) */
+        #login-form {
+            text-align: center;
+            padding: 20px;
+        }
+        #login-form input {
+            width: 90%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            text-align: right;
+        }
+        .login-btn {
+            background-color: var(--main-blue);
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            width: 90%;
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .signup-btn {
+            background-color: #42b72a; /* أخضر فيسبوك */
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            width: 60%;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        /* إخفاء واجهة التطبيق حتى يتم تسجيل الدخول */
+        #app-content { display: none; }
+        #login-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--light-bg);
+            padding-top: 0;
+        }
+        .login-panel {
+            flex-basis: 400px;
+            text-align: center;
+            margin: 0 50px;
+        }
+        .login-panel h1 {
+            color: var(--main-blue);
+            font-size: 40px;
         }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <a href="#" class="logo">سعد بوك</a>
-        <div class="search-box">
-            <input type="text" placeholder="البحث في سعد بوك">
+    <div id="login-screen">
+        <div class="login-panel">
+            <h1>سعد بوك</h1>
+            <p style="font-size: 18px;">تواصل مع الأصدقاء والعالم من حولك على "سعد بوك".</p>
         </div>
-        <div>
-            <a href="#" class="nav-link" style="padding: 0;">ملفي الشخصي</a>
+        <div class="login-panel widget-card">
+            <form id="login-form">
+                <input type="email" id="email" placeholder="البريد الإلكتروني أو رقم الهاتف" required>
+                <input type="password" id="password" placeholder="كلمة السر" required>
+                <button type="submit" class="login-btn">تسجيل الدخول</button>
+                <a href="#" style="color: var(--main-blue); text-decoration: none; font-size: 14px;">هل نسيت كلمة السر؟</a>
+                <hr style="margin: 20px 0;">
+                <button type="button" class="signup-btn">إنشاء حساب جديد</button>
+            </form>
         </div>
     </div>
 
-    <div class="container">
-        <div class="sidebar left-sidebar">
-            <a href="#" class="nav-link">🏠 الصفحة الرئيسية</a>
-            <a href="#" class="nav-link">👥 الأصدقاء</a>
-            <a href="#" class="nav-link">⭐ المجموعات</a>
-            <a href="#" class="nav-link">🎬 مشاهدة</a>
+    <div id="app-content">
+        <div class="header">
+            <a href="#" class="logo">سعد بوك</a>
+            <div class="search-box">
+                <input type="text" placeholder="البحث في سعد بوك">
+            </div>
+            <button class="action-button" onclick="logout()" style="color: var(--main-blue);">
+                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+            </button>
+        </div>
+
+        <div class="container">
+            <div class="sidebar right-sidebar">
+                <a href="#" class="nav-link"><i class="fas fa-user-circle"></i> الملف الشخصي</a>
+                <a href="#" class="nav-link"><i class="fas fa-home"></i> الصفحة الرئيسية</a>
+                <a href="#" class="nav-link"><i class="fas fa-users"></i> الأصدقاء</a>
+                <a href="#" class="nav-link"><i class="fas fa-layer-group"></i> المجموعات</a>
+                <a href="#" class="nav-link"><i class="fas fa-video"></i> مشاهدة</a>
             </div>
 
-        <div class="main-content">
-            <div class="post-card">
-                <h3>ماذا تفكر يا سعد؟</h3>
-                <textarea style="width: 100%; height: 60px; border: 1px solid #ddd; border-radius: 6px; padding: 10px;" placeholder="اكتب منشورًا..."></textarea>
-                <button style="background-color: var(--main-blue); color: #fff; border: none; padding: 8px 15px; border-radius: 6px; margin-top: 10px; cursor: pointer;">نشر</button>
+            <div class="main-content">
+                <div class="create-post-card">
+                    <h3>ماذا تفكر يا سعد؟</h3>
+                    <textarea id="post-input" placeholder="اكتب منشورًا..."></textarea>
+                    <button class="post-button" onclick="createPost()">نشر</button>
+                </div>
+                
+                <div id="news-feed">
+                    <div class="post-card">
+                        <div class="post-header">
+                            <div class="profile-pic" style="background-color: #f0c330;"></div>
+                            <div class="post-user-info">
+                                <strong>المستخدم الافتراضي</strong>
+                                <small>منذ دقيقتين</small>
+                            </div>
+                        </div>
+                        <div class="post-body">
+                            <p>أول منشور تجريبي في "سعد بوك"! انقر على زر الإعجاب بالأسفل لترى كيف يعمل التفاعل!</p>
+                        </div>
+                        <div class="post-actions">
+                            <button class="action-button like-btn" onclick="toggleLike(this)">
+                                <i class="far fa-thumbs-up"></i> إعجاب
+                            </button>
+                            <button class="action-button">
+                                <i class="far fa-comment-alt"></i> تعليق
+                            </button>
+                            <button class="action-button">
+                                <i class="fas fa-share"></i> مشاركة
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="post-card">
-                <div class="post-header">
-                    <div class="profile-pic"></div>
-                    <div class="post-user-info">
-                        <strong>اسم المستخدم 1</strong>
-                        <small style="color: #606770;">منذ ساعة</small>
-                    </div>
+            <div class="sidebar left-sidebar">
+                <div class="widget-card">
+                    <strong>اقتراحات الأصدقاء</strong>
+                    <p style="font-size: 14px; margin: 10px 0;">محمد - تريد إضافته؟</p>
+                    <p style="font-size: 14px; margin: 10px 0;">فاطمة - قد تعرفها</p>
                 </div>
-                <div class="post-body">
-                    <p>مرحبًا بالجميع في "سعد بوك"! هذه هي أول تدوينة لي هنا. أتمنى أن نستمتع بتجربة اجتماعية جديدة ومفيدة.</p>
-                </div>
-                </div>
+            </div>
+        </div>
+    </div>
 
-            <div class="post-card">
-                <div class="post-header">
-                    <div class="profile-pic"></div>
-                    <div class="post-user-info">
-                        <strong>اسم المستخدم 2</strong>
-                        <small style="color: #606770;">منذ 3 ساعات</small>
-                    </div>
-                </div>
-                <div class="post-body">
-                    <p>التصميمات الأولية تبدو رائعة! العمل على HTML وCSS هو الخطوة الأولى دائمًا.</p>
-                </div>
-                </div>
+    <script>
+        // =================================================
+        // JAVASCRIPT: التفاعل والمنطق (محاكاة)
+        // =================================================
+        const newsFeed = document.getElementById('news-feed');
+        const postInput = document.getElementById('post-input');
+        const loginScreen = document.getElementById('login-screen');
+        const appContent = document.getElementById('app-content');
+        const loginForm = document.getElementById('login-form');
+
+        // *** 1. وظيفة محاكاة تسجيل الدخول والخروج ***
+
+        function login(event) {
+            // منع إعادة تحميل الصفحة الافتراضي للنموذج
+            event.preventDefault(); 
             
-        </div>
+            // تحقق بسيط (يمكنك إضافة منطق تحقق معقد هنا لو كان هناك خادم)
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
 
-        <div class="sidebar right-sidebar">
-            <div class="post-card" style="padding: 10px;">
-                <strong>اقتراحات الأصدقاء</strong>
-                <p>صديق مقترح 1</p>
-                <p>صديق مقترح 2</p>
-            </div>
-        </div>
-    </div>
+            if (email && password) {
+                // إخفاء شاشة تسجيل الدخول وإظهار واجهة التطبيق
+                loginScreen.style.display = 'none';
+                appContent.style.display = 'block';
+                document.body.style.paddingTop = '56px'; // إعادة ضبط الهامش
+                alert('تم تسجيل الدخول بنجاح إلى سعد بوك!');
+            } else {
+                alert('الرجاء إدخال البريد الإلكتروني وكلمة السر.');
+            }
+        }
 
+        function logout() {
+            // إخفاء واجهة التطبيق وإظهار شاشة تسجيل الدخول
+            appContent.style.display = 'none';
+            loginScreen.style.display = 'flex';
+            document.body.style.paddingTop = '0'; // إزالة الهامش العلوي
+            alert('تم تسجيل الخروج.');
+        }
+
+        // ربط وظيفة تسجيل الدخول بزر النموذج
+        loginForm.addEventListener('submit', login);
+
+
+        // *** 2. وظيفة إنشاء منشور جديد ***
+
+        function createPost() {
+            const postText = postInput.value.trim();
+            if (postText === '') {
+                alert('الرجاء كتابة محتوى للمنشور.');
+                return;
+            }
+
+            // إنشاء عنصر المنشور الجديد (بنفس هيكل HTML للمثال)
+            const newPostHTML = `
+                <div class="post-card">
+                    <div class="post-header">
+                        <div class="profile-pic" style="background-color: var(--main-blue);"></div>
+                        <div class="post-user-info">
+                            <strong>سعد (أنت)</strong>
+                            <small>الآن</small>
+                        </div>
+                    </div>
+                    <div class="post-body">
+                        <p>${postText}</p>
+                    </div>
+                    <div class="post-actions">
+                        <button class="action-button like-btn" onclick="toggleLike(this)">
+                            <i class="far fa-thumbs-up"></i> إعجاب
+                        </button>
+                        <button class="action-button">
+                            <i class="far fa-comment-alt"></i> تعليق
+                        </button>
+                        <button class="action-button">
+                            <i class="fas fa-share"></i> مشاركة
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // إضافة المنشور الجديد إلى أعلى تدفق الأخبار
+            newsFeed.insertAdjacentHTML('afterbegin', newPostHTML);
+            
+            // مسح مربع النص بعد النشر
+            postInput.value = '';
+        }
+
+        // *** 3. وظيفة التفاعل (الإعجاب) ***
+
+        function toggleLike(buttonElement) {
+            const icon = buttonElement.querySelector('i');
+            
+            // التحقق مما إذا كان الزر "مُعجب به" بالفعل
+            const isLiked = buttonElement.classList.toggle('liked');
+
+            if (isLiked) {
+                // إذا تم الإعجاب
+                icon.classList.remove('far');
+                icon.classList.add('fas');
+                buttonElement.innerHTML = `<i class="fas fa-thumbs-up"></i> تم الإعجاب`;
+            } else {
+                // إذا تم إزالة الإعجاب
+                icon.classList.remove('fas');
+                icon.classList.add('far');
+                buttonElement.innerHTML = `<i class="far fa-thumbs-up"></i> إعجاب`;
+            }
+        }
+        
+    </script>
 </body>
 </html>
