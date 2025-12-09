@@ -13,7 +13,7 @@
 
 <style>
 body,html{margin:0;padding:0;height:100%;font-family:Tahoma;}
-#map{height:80vh; /* تم زيادة ارتفاع الخريطة */}
+#map{height:80vh;}
 #panel{
     background:#fff;padding:10px;text-align:center;
     box-shadow:0 -2px 5px rgba(0,0,0,0.2);
@@ -26,34 +26,35 @@ button{
 #logoutBtn{
     background:#455a64;color:white;margin-top:10px;width:95%;
 }
-#wazeBtn{
-    background:#1E90FF;color:white;
-}
 
 /* تنسيقات الأزرار العائمة الجديدة */
 #floatingControls{
     position: absolute;
-    bottom: 10px; /* عائمة فوق لوحة التحكم السفلية */
+    bottom: 10px; 
     left: 10px;
     z-index: 1000;
-    direction: ltr; /* لتثبيت الأزرار على اليسار */
+    direction: ltr;
+    display: flex; /* تفعيل Flexbox */
+    flex-direction: column-reverse; /* لعرض الأزرار من الأسفل للأعلى (الإنهاء في الأسفل) */
+    align-items: flex-start; /* محاذاة العناصر إلى اليسار */
+    gap: 10px; /* مسافة بين العناصر */
 }
 #floatingControls button,
 #floatingControls .ride-action-info {
     display: block;
-    margin-top: 10px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     border-radius: 8px;
     width: 150px;
     font-size: 14px;
     padding: 10px;
+    margin: 0; /* إزالة الهامش الافتراضي لتجنب الاختلاط */
 }
 .ride-action-info {
     background: #fff;
     padding: 5px;
     color: #333;
     font-size: 0.9em;
-    direction: rtl; /* لإعادة اللغة العربية داخل الحاوية */
+    direction: rtl; 
     text-align: center;
 }
 .phone-link {
@@ -75,6 +76,10 @@ button{
     background: #1e88e5;
     color: white;
 }
+#wazeBtn {
+    background: #1E90FF;
+    color: white;
+}
 </style>
 </head>
 <body>
@@ -82,12 +87,12 @@ button{
 <div id="map"></div>
 
 <div id="floatingControls" style="display:none;">
-    <div id="riderContactInfo" class="ride-action-info" style="display:none;"></div>
-
-    <button id="wazeBtn" onclick="openWaze()"></button>
-    
     <button id="startRideBtn" style="display:none;">بدء الرحلة 🚦</button> 
     <button id="finishBtn" style="display:none;">إنهاء الرحلة</button>
+    
+    <button id="wazeBtn" onclick="openWaze()"></button>
+    
+    <div id="riderContactInfo" class="ride-action-info" style="display:none;"></div>
 </div>
 
 
@@ -325,7 +330,7 @@ function handleAcceptedRide(id,r){
     logoutBtn.style.display="none"; 
     
     // إظهار الأزرار العائمة
-    floatingControls.style.display="block";
+    floatingControls.style.display="flex";
     riderContactInfo.style.display = "block";
     startRideBtn.style.display="inline-block"; // إظهار زر البدء
     finishBtn.style.display="none"; // إخفاء زر الإنهاء
@@ -379,7 +384,7 @@ function handleStartedRide(id,r){
     logoutBtn.style.display="none";
     
     // إظهار الأزرار العائمة
-    floatingControls.style.display="block";
+    floatingControls.style.display="flex";
     riderContactInfo.style.display = "block";
     startRideBtn.style.display="none";
     finishBtn.style.display="inline-block"; // إظهار زر الإنهاء
