@@ -13,44 +13,22 @@
 
 <style>
 body,html{margin:0;padding:0;height:100%;font-family:Tahoma;}
-
-/* تغييرات التخطيط للويب فيو */
-#map{height:100vh; width:100%; position:relative;} /* الخريطة تملأ الشاشة بالكامل */
+#map{height:60vh;}
 #panel{
-    /* لجعل اللوحة عائمة فوق الخريطة */
-    position: absolute;
-    top: 50%; /* تبدأ من المنتصف */
-    left: 10px; /* على اليسار */
-    transform: translateY(-50%); /* تحريكها للأعلى لتكون في المنتصف */
-    z-index: 1000;
-    
-    background:rgba(255,255,255,0.9); /* خلفية شبه شفافة */
-    padding:10px;
-    text-align:center;
-    box-shadow:0 0 10px rgba(0,0,0,0.5);
-    border-radius:10px;
-    max-width:200px; /* لتقييد عرض اللوحة */
+    background:#fff;padding:10px;text-align:center;
+    box-shadow:0 -2px 5px rgba(0,0,0,0.2);
 }
-
-/* تعديل عرض الأزرار لتكون أكثر ملاءمة للعمود */
 button{
-    background:#ffb300;border:none;padding:10px;
-    border-radius:8px;margin:5px 0; /* مسافة عمودية */
-    font-weight:bold;
+    background:#ffb300;border:none;padding:10px 20px;
+    border-radius:8px;margin:5px;font-weight:bold;
     cursor:pointer;
-    width:100%; /* الأزرار بعرض كامل داخل اللوحة */
-    box-sizing: border-box;
 }
-
-/* الأزرار الخاصة */
 #logoutBtn{
-    background:#455a64;color:white;margin-top:10px;
-    font-size: small; /* تصغير حجم خط زر الخروج */
+    background:#455a64;color:white;margin-top:10px;width:95%;
 }
 #wazeBtn{
     background:#1E90FF;color:white;
 }
-
 /* تنسيق لعرض رقم الهاتف بشكل أفضل */
 .phone-link {
     color: #007bff;
@@ -62,7 +40,6 @@ button{
 .phone-link:hover {
     text-decoration: underline;
 }
-
 </style>
 </head>
 <body>
@@ -71,10 +48,10 @@ button{
 
 <div id="panel">
     <h3>🚖 وضع السائق</h3>
+    <p id="status">في انتظار الطلبات...</p>
     
     <button id="wazeBtn" style="display:none;" onclick="openWaze()">ويز حدث 🗺️</button>
-    
-    <p id="status">في انتظار الطلبات...</p>
+    <br>
 
     <button id="acceptBtn" style="display:none;background:#4caf50;color:white;">قبول الرحلة</button>
     <button id="rejectBtn" style="display:none;background:#e53935;color:white;">رفض الرحلة</button>
@@ -113,7 +90,7 @@ const db=firebase.database();
 // إنشاء الخريطة
 let map=L.map('map').setView([33.3152,44.3661],13);
 
-// ⭐⭐ تم استبدال الخريطة بخريطة Google فقط — بدون أي تغيير آخر ⭐⭐
+// ⭐⭐ خريطة Google Maps ⭐⭐
 L.tileLayer(
  "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&key=AIzaSyD7TtwniAdUtB8-pnTny4ZwE6gqX36SGUk",
  {maxZoom:20}
@@ -182,16 +159,19 @@ function openWaze(){
     if(!currentRideData) return;
 
     let lat, lng;
+    let status = currentRideData.status;
     
-    // إذا كانت مقبولة، اذهب إلى موقع الراكب (نقطة البداية)
-    if (currentRideData.status === "مقبولة") {
+    // إذا كانت مقبولة (ذاهب للراكب)، اذهب إلى موقع الراكب (نقطة البداية)
+    if (status === "مقبولة" && currentRideData.startLat && currentRideData.startLng) {
         lat = currentRideData.startLat;
         lng = currentRideData.startLng;
     } 
-    // إذا كانت بدأت، اذهب إلى الوجهة (نقطة النهاية)
-    else if (currentRideData.status === "بدأت") {
+    // إذا كانت بدأت (ذاهب للوجهة)، اذهب إلى نقطة النهاية
+    else if (status === "بدأت" && currentRideData.endLat && currentRideData.endLng) {
         lat = currentRideData.endLat;
         lng = currentRideData.endLng;
+    } else {
+        return; // لا يوجد إحداثيات أو حالة غير مناسبة
     }
 
     if(lat && lng){
@@ -204,10 +184,10 @@ function openWaze(){
 const statusText=document.getElementById("status");
 const acceptBtn=document.getElementById("acceptBtn");
 const rejectBtn=document.getElementById("rejectBtn");
-const startRideBtn=document.getElementById("startRideBtn"); 
+const startRideBtn=document.getElementById("startRideBtn");
 const finishBtn=document.getElementById("finishBtn");
 const wazeBtn=document.getElementById("wazeBtn");
-const logoutBtn=document.getElementById("logoutBtn");
+const logoutBtn=document.getElementById("logoutBtn"); // الحصول على زر تسجيل الخروج
 
 db.ref("rides").on("value",snap=>{
     let data=snap.val();
@@ -217,7 +197,6 @@ db.ref("rides").on("value",snap=>{
 
     Object.keys(data).forEach(id=>{
         let r=data[id];
-        
         // معالجة الطلبات الجديدة
         if(r.status==="جديدة" && !rideFound){
             rideFound=true;
@@ -228,7 +207,7 @@ db.ref("rides").on("value",snap=>{
              rideFound=true;
              handleAcceptedRide(id,r);
         }
-        // معالجة الرحلات التي بدأت حالياً
+        // معالجة الرحلات التي بدأت حالياً (تمت الإضافة)
         else if(r.status==="بدأت" && r.driverPhone===driverPhone){
              rideFound=true;
              handleStartedRide(id,r);
@@ -236,7 +215,6 @@ db.ref("rides").on("value",snap=>{
     });
 
     if(!rideFound){
-        // حالة عدم وجود أي طلبات أو رحلات نشطة
         removeAllRideMarkers();
         currentRideId=null;
         currentRideData=null;
@@ -245,10 +223,7 @@ db.ref("rides").on("value",snap=>{
         startRideBtn.style.display="none";
         finishBtn.style.display="none";
         wazeBtn.style.display="none";
-        
-        // إظهار زر تسجيل الخروج في وضع الانتظار
-        logoutBtn.style.display="inline-block"; 
-        
+        logoutBtn.style.display="inline-block"; // إظهار زر تسجيل الخروج
         statusText.innerText="في انتظار الطلبات...";
     }
 });
@@ -257,16 +232,16 @@ function showRideRequest(id,r){
     currentRideId=id;
     currentRideData=r;
     
-    // إخفاء الأزرار غير المرغوب فيها في مرحلة الطلب الجديد
+    // إخفاء الأزرار المتبقية
     startRideBtn.style.display="none";
     finishBtn.style.display="none";
     wazeBtn.style.display="none";
-    logoutBtn.style.display="inline-block"; 
+    logoutBtn.style.display="inline-block"; // إظهار تسجيل الخروج
     removeAllRideMarkers();
 
-    // **تنفيذ طلبك: حساب وعرض الأجرة قبل القبول**
+    // حساب وعرض الأجرة
     const distance = parseFloat(r.distance) || 0;
-    const fare = Math.round(distance * 1000); // 1000 دينار لكل كم
+    const fare = r.fare || Math.round(distance * 1000); // 1000 دينار لكل كم
     const formattedFare = fare.toLocaleString('ar-IQ') || '...';
 
 
@@ -275,7 +250,7 @@ function showRideRequest(id,r){
        من: <b>${r.startArea}</b><br>
        إلى: <b>${r.endArea}</b><br>
        المسافة: **${r.distance} كم**<br>
-       **الأجرة المتوقعة: ${formattedFare} د.ع**`; 
+       **الأجرة المتوقعة: ${formattedFare} د.ع**`; // عرض الأجرة والمسافة والمنطقة
 
     acceptBtn.style.display="inline-block";
     rejectBtn.style.display="inline-block";
@@ -298,11 +273,11 @@ function handleAcceptedRide(id,r){
     currentRideId=id;
     currentRideData=r;
     
-    // إظهار الأزرار ذات الصلة وإخفاء البقية (قبول الرحلة: ويز وبدء الرحلة)
+    // إظهار زر ويز وزر البدء
     acceptBtn.style.display="none";
     rejectBtn.style.display="none";
-    startRideBtn.style.display="inline-block"; // إظهار زر بدء الرحلة
-    finishBtn.style.display="none"; 
+    startRideBtn.style.display="inline-block"; // إظهار زر البدء
+    finishBtn.style.display="none"; // إخفاء زر الإنهاء
     wazeBtn.style.display="inline-block"; // إظهار زر ويز
     logoutBtn.style.display="none"; // إخفاء زر تسجيل الخروج
 
@@ -321,25 +296,25 @@ function handleAcceptedRide(id,r){
         map.setView(passengerCoords, 14); // التركيز على الراكب
     }
 
-    statusText.innerHTML=`تم قبول الرحلة. في طريقك للراكب...`;
+    statusText.innerHTML=`تم قبول الرحلة. في طريقك للراكب **(${r.startArea})**...`;
 
 
-    // عند الضغط على بدء الرحلة
+    // زر بدء الرحلة يقوم فقط بتحديث الحالة
     startRideBtn.onclick=function(){
         db.ref("rides/"+id).update({status:"بدأت"});
     };
     
-    // عند الضغط على إنهاء الرحلة (فقط لضمان وجود الدالة، لكنها غير ظاهرة)
+    // عند الضغط على إنهاء الرحلة
     finishBtn.onclick=function(){
         db.ref("rides/"+id).update({status:"منتهية"});
     };
 }
 
+// === دالة جديدة للتعامل مع حالة "بدأت" ===
 function handleStartedRide(id,r){
     currentRideId=id;
     currentRideData=r;
     
-    // إظهار الأزرار ذات الصلة وإخفاء البقية (بدء الرحلة: إنهاء الرحلة)
     acceptBtn.style.display="none";
     rejectBtn.style.display="none";
     startRideBtn.style.display="none";
@@ -352,13 +327,13 @@ function handleStartedRide(id,r){
     // **تنفيذ طلبك: إظهار رقم الراكب تشعبي**
     statusText.innerHTML=`
         الرحلة بدأت!
-        <a href="tel:${r.passengerPhone}" class="phone-link">
-            📞 اتصل بالراكب: ${r.passengerPhone}
+        <a href="tel:${r.riderPhone}" class="phone-link">
+            📞 اتصل بالراكب: ${r.riderPhone}
         </a>
         الوجهة: **${r.endArea}**
     `;
-
-    // مسار نقطة النهاية
+    
+    // **تنفيذ طلبك: مسار نقطة النهاية (من نقطة البداية إلى نقطة الوصول)**
     if(r.startLat && r.startLng && r.endLat && r.endLng){
         let startCoords=[r.startLat, r.startLng];
         let endCoords=[r.endLat, r.endLng];
@@ -377,8 +352,10 @@ function handleStartedRide(id,r){
     // عند الضغط على إنهاء الرحلة
     finishBtn.onclick=function(){
         db.ref("rides/"+id).update({status:"منتهية"});
+        // التنظيف يتم في الحلقة الرئيسية
     };
 }
+// ===============================================
 </script>
 
 </body>
