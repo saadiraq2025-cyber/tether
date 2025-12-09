@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+<title>لوحة تحكم الأدمن - Taxi Iraq</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+<style>
+body { font-family: Tahoma; background:#f3f3f3; margin:0; padding:10px; }
+h2 { text-align:center; color:#2e7d32; margin:15px 0; }
+
+.counterBox, .searchBox {
+    background:white;padding:10px;margin-bottom:15px;border-radius:8px;
+    box-shadow:0 2px 5px #0001;font-size:16px;text-align:center;
+}
+
+input, select { padding:8px; width:100%; margin-top:8px; border:1px solid #ccc; border-radius:5px; }
+
+.notifyBox, .whatsappBox {
+    background:white;padding:15px;margin-top:20px;border-radius:8px;
+    box-shadow:0 2px 5px #0001;
+}
+
+textarea { width:100%; height:90px; padding:10px; border:1px solid #ccc; border-radius:5px; }
+
+table { width:100%; background:white; border-collapse:collapse; margin-top:20px; box-shadow:0 2px 5px #0001; }
+th, td { padding:10px; border:1px solid #ddd; text-align:center; font-size:14px; }
+th { background:#2e7d32; color:white; }
+
+button { border:none; padding:6px 10px; border-radius:5px; cursor:pointer; font-size:12px; }
+.days { background:#2e7d32; color:white; }
+.minutes { background:#00bcd4; color:white; }
+.month { background:#7b1fa2; color:white; }
+.ban { background:#e53935; color:white; }
+.unban { background:#fdd835; }
+.del { background:#333; color:white; }
+</style>
+</head>
+
+<body>
+
+<h2>👑 لوحة تحكم الأدمن - إدارة المستخدمين</h2>
+
+<div class="counterBox">
+    🚖 عدد السائقين: <span id="driversCount">0</span><br>
+    👤 عدد الركاب: <span id="ridersCount">0</span>
+</div>
+
+<div class="searchBox">
+    <h3>🔎 البحث</h3>
+    <input type="text" id="searchInput" placeholder="ابحث برقم الهاتف...">
+    <select id="searchType">
+        <option value="">الكل</option>
+        <option value="driver">سائق فقط</option>
+        <option value="rider">راكب فقط</option>
+    </select>
+    <button onclick="filterUsers()">بحث</button>
+</div>
+
+<div class="notifyBox">
+    <h3>📣 إرسال رسالة داخل التطبيق</h3>
+    <select id="notifyType">
+        <option value="single">إلى مستخدم واحد</option>
+        <option value="allDrivers">كل السائقين</option>
+        <option value="allRiders">كل الركاب</option>
+    </select>
+    <input type="text" id="singlePhone" placeholder="رقم الهاتف">
+    <textarea id="notifyMessage"></textarea>
+    <button onclick="sendNotification()">إرسال</button>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>الهاتف</th>
+            <th>النوع</th>
+            <th>الحالة</th>
+            <th>الانتهاء</th>
+            <th>الإجراءات</th>
+        </tr>
+    </thead>
+    <tbody id="usersTable"></tbody>
+</table>
+
+<script>
+// Firebase Init
+var firebaseConfig = {
+    apiKey: "AIzaSyBZy7GTKn62CqeXAgm2fLrXI67P4Lc4Q3M",
+    authDomain: "taxi-15314.firebaseapp.com",
+    databaseURL: "https://taxi-15314-default-rtdb.firebaseio.com/",
+    projectId: "taxi-15314"
+};
+firebase.initializeApp(firebaseConfig);
+
+var db = firebase.database();
+var usersRef = db.ref("users");
+let allUsers = {}; // لحفظ جميع المستخدمين للبحث
+
+// إشعارات
+function sendNotification() {
+    const type = notifyType.value;
+    const msg = notifyMessage.value.trim();
+    const phone = singlePhone.value.trim();
+
+    if (!msg) return alert("❌ اكتب الرسالة");
+
+    if (type === "single" && !phone)
+        return alert("❌ أدخل رقم الهاتف");
+
+    usersRef.once("value", snap => {
+        const data = snap.val();
+        let count = 0;
+
+        for (let p in data) {
+            const u = data[p].type;
+            if (type === "single" && p === phone) {
+                db.ref("notifications/" + phone).set({ message: msg, time: Date.now() });
+                count = 1;
+            }
+            else if (type === "allDrivers" && u === "driver") {
+                db.ref("notifications/" + p).set({ message: msg, time: Date.now() });
+                count++;
+            }
+            else if (type === "allRiders" && u === "rider") {
+                db.ref("notifications/" + p).set({ message: msg, time: Date.now() });
+                count++;
+            }
+        }
+
+        alert("تم الإرسال إلى " + count + " مستخدم");
+    });
+}
+
+// أدوات التحكم
+function activateDays(phone) {
+    usersRef.child(phone).update({ banned:false, expire: Date.now() + 86400000 });
+}
+function activateMinutes(phone) {
+    usersRef.child(phone).update({ banned:false, expire: Date.now() + 60000 });
+}
+function activateMonth(phone) {
+    usersRef.child(phone).update({ banned:false, expire: Date.now() + (30*24*60*60*1000) });
+}
+function banUser(phone) { usersRef.child(phone).update({ banned:true }); }
+function unbanUser(phone) { usersRef.child(phone).update({ banned:false }); }
+function deleteUser(phone) { if (confirm("حذف؟")) usersRef.child(phone).remove(); }
+
+// عرض المستخدمين + العدادات + التفعيل التلقائي
+usersRef.on("value", snap => {
+    allUsers = snap.val() || {};
+    
+    // --- كود التفعيل التلقائي (الجديد) ---
+    // نقوم بالدوران على جميع المستخدمين، وإذا وجدنا سائقاً جديداً بدون تاريخ انتهاء، نفعله 30 يوماً
+    for (let phone in allUsers) {
+        const user = allUsers[phone];
+        
+        // الشرط: النوع سائق، ولا يملك خاصية expire (يعني جديد)
+        if (user.type === "driver" && !user.expire) {
+            console.log("تفعيل تلقائي للمشترك الجديد: " + phone);
+            usersRef.child(phone).update({
+                expire: Date.now() + (30 * 24 * 60 * 60 * 1000), // تفعيل 30 يوم
+                banned: false
+            });
+        }
+    }
+    // -------------------------------------
+
+    loadUsers(allUsers);
+});
+
+// تحميل المستخدمين في الجدول
+function loadUsers(data) {
+    usersTable.innerHTML = "";
+    let drivers = 0, riders = 0;
+
+    for (let phone in data) {
+        const u = data[phone];
+        if (u.type === "driver") drivers++; else riders++;
+
+        const exp = u.expire || 0;
+        const now = Date.now();
+
+        let status = "فعال";
+        if (u.banned) status = "محظور";
+        else if (u.type === "driver" && exp < now) status = "منتهي";
+        else if (u.type === "driver") status = "مشترك";
+
+        let expire = "---";
+        if (exp > 0)
+            expire = new Date(exp).toLocaleString("ar-IQ");
+
+        usersTable.innerHTML += `
+            <tr>
+                <td>${phone}</td>
+                <td>${u.type === "driver" ? "سائق" : "راكب"}</td>
+                <td>${status}</td>
+                <td>${expire}</td>
+                <td>
+                    <button class="days" onclick="activateDays('${phone}')">يوم</button>
+                    <button class="minutes" onclick="activateMinutes('${phone}')">دقيقة</button>
+                    <button class="month" onclick="activateMonth('${phone}')">شهر</button>
+                    <button class="ban" onclick="banUser('${phone}')">حظر</button>
+                    <button class="unban" onclick="unbanUser('${phone}')">إلغاء</button>
+                    <button class="del" onclick="deleteUser('${phone}')">حذف</button>
+                </td>
+            </tr>
+        `;
+    }
+
+    driversCount.innerText = drivers;
+    ridersCount.innerText = riders;
+}
+
+// البحث
+function filterUsers() {
+    const text = searchInput.value.trim();
+    const type = searchType.value;
+
+    let result = {};
+
+    for (let p in allUsers) {
+        const u = allUsers[p];
+
+        if (text && !p.includes(text)) continue;
+        if (type && u.type !== type) continue;
+
+        result[p] = u;
+    }
+
+    loadUsers(result);
+}
+</script>
+
+</body>
+</html>

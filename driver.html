@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>السائق - تكسي العراق الشامل</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+<style>
+body,html{margin:0;padding:0;height:100%;font-family:Tahoma;}
+#map{height:60vh;}
+#panel{
+    background:#fff;padding:10px;text-align:center;
+    box-shadow:0 -2px 5px rgba(0,0,0,0.2);
+}
+button{
+    background:#ffb300;border:none;padding:10px 20px;
+    border-radius:8px;margin:5px;font-weight:bold;
+    cursor:pointer;
+}
+#logoutBtn{
+    background:#455a64;color:white;margin-top:10px;width:95%;
+}
+#wazeBtn{
+    background:#1E90FF;color:white;
+}
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="panel">
+    <h3>🚖 وضع السائق</h3>
+    <p id="status">في انتظار الطلبات...</p>
+    
+    <button id="wazeBtn" style="display:none;" onclick="openWaze()">ويز حدث 🗺️</button>
+    <br>
+
+    <button id="acceptBtn" style="display:none;background:#4caf50;color:white;">قبول الرحلة</button>
+    <button id="rejectBtn" style="display:none;background:#e53935;color:white;">رفض الرحلة</button>
+    
+    <button id="startRideBtn" style="display:none;background:#ff9800;color:white;">بدء الرحلة 🚦</button> 
+
+    <button id="finishBtn" style="display:none;background:#1e88e5;color:white;">إنهاء الرحلة</button>
+
+    <button id="logoutBtn" onclick="logout()">تسجيل الخروج</button>
+</div>
+
+<script>
+// منع الدخول بدون حساب
+window.onload=function(){
+    let phone=localStorage.getItem("phone");
+    let type=localStorage.getItem("userType");
+    if(!phone||type!=="driver"){
+        window.location.href="index.html";
+    }
+};
+
+function logout(){
+    localStorage.clear();
+    window.location.href="index.html";
+}
+
+// Firebase
+const app=firebase.initializeApp({
+  apiKey:"AIzaSyBZy7GTKn62CqeXAgm2fLrXI67P4Lc4Q3M",
+  authDomain:"taxi-15314.firebaseapp.com",
+  databaseURL:"https://taxi-15314-default-rtdb.firebaseio.com/",
+  projectId:"taxi-15314"
+});
+const db=firebase.database();
+
+// إنشاء الخريطة
+let map=L.map('map').setView([33.3152,44.3661],13);
+
+// ⭐⭐ تم استبدال الخريطة بخريطة Google فقط — بدون أي تغيير آخر ⭐⭐
+L.tileLayer(
+ "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&key=AIzaSyD7TtwniAdUtB8-pnTny4ZwE6gqX36SGUk",
+ {maxZoom:20}
+).addTo(map);
+
+map.whenReady(()=>map.invalidateSize());
+
+// موقع السائق
+let driverMarker=null;
+let driverPhone=localStorage.getItem("phone");
+
+// ===== المتغيرات الجديدة للرحلة والمسارات =====
+let currentRideId=null;
+let passengerMarker=null;
+let pickupRoute=null; // مسار نقطة البداية (من السائق للراكب)
+let destinationRoute=null; // مسار نقطة النهاية (من الراكب لنقطة النهاية)
+let currentRideData=null;
+// ===========================================
+
+// تحديث موقع السائق كل 5 ثوانٍ
+setInterval(()=>{
+    navigator.geolocation.getCurrentPosition(pos=>{
+        let lat=pos.coords.latitude;
+        let lng=pos.coords.longitude;
+
+        if(driverMarker) map.removeLayer(driverMarker);
+        driverMarker=L.marker([lat,lng]).addTo(map).bindPopup("📍 موقعك");
+
+        db.ref("drivers/"+driverPhone).set({
+            lat:lat,lng:lng,status:"متصل"
+        });
+
+    },err=>{},{
+        enableHighAccuracy:true,timeout:5000
+    });
+},5000);
+
+// الدوال المساعدة للمسارات والمؤشرات
+function removeAllRideMarkers(){
+    if(passengerMarker) map.removeLayer(passengerMarker);
+    if(pickupRoute) map.removeLayer(pickupRoute);
+    if(destinationRoute) map.removeLayer(destinationRoute);
+    passengerMarker=null;
+    pickupRoute=null;
+    destinationRoute=null;
+}
+
+// عرض مسار (polyline) بسيط بين نقطتين (للتوضيح، يجب استخدام خدمة مسارات حقيقية)
+function drawRoute(coords, color, dashArray=''){
+    let route=L.polyline(coords,{color:color,dashArray:dashArray,weight:5}).addTo(map);
+    return route;
+}
+
+// فتح Waze
+function openWaze(){
+    if(currentRideData && currentRideData.startLat && currentRideData.startLng){
+        // استخدام إحداثيات نقطة انطلاق الراكب كوجهة في Waze
+        let lat=currentRideData.startLat;
+        let lng=currentRideData.startLng;
+        window.open(`https://www.waze.com/ul?ll=${lat},${lng}&navigate=yes`, '_blank');
+    }
+}
+
+
+// استقبال الطلبات
+const statusText=document.getElementById("status");
+const acceptBtn=document.getElementById("acceptBtn");
+const rejectBtn=document.getElementById("rejectBtn");
+const startRideBtn=document.getElementById("startRideBtn"); // الزر الجديد
+const finishBtn=document.getElementById("finishBtn");
+const wazeBtn=document.getElementById("wazeBtn");
+
+db.ref("rides").on("value",snap=>{
+    let data=snap.val();
+    if(!data) return;
+
+    let rideFound=false;
+
+    Object.keys(data).forEach(id=>{
+        let r=data[id];
+        // معالجة الطلبات الجديدة
+        if(r.status==="جديدة" && !rideFound){
+            rideFound=true;
+            showRideRequest(id,r);
+        }
+        // معالجة الرحلات المقبولة حالياً
+        else if(r.status==="مقبولة" && r.driverPhone===driverPhone){
+             rideFound=true;
+             handleAcceptedRide(id,r);
+        }
+    });
+
+    if(!rideFound){
+        removeAllRideMarkers();
+        currentRideId=null;
+        currentRideData=null;
+        acceptBtn.style.display="none";
+        rejectBtn.style.display="none";
+        startRideBtn.style.display="none";
+        finishBtn.style.display="none";
+        wazeBtn.style.display="none";
+        statusText.innerText="في انتظار الطلبات...";
+    }
+});
+
+function showRideRequest(id,r){
+    currentRideId=id;
+    currentRideData=r;
+    
+    // إخفاء الأزرار المتبقية
+    startRideBtn.style.display="none";
+    finishBtn.style.display="none";
+    wazeBtn.style.display="none";
+    removeAllRideMarkers();
+
+
+    statusText.innerHTML=
+      `🚖 طلب جديد<br>من: <b>${r.startArea}</b><br>إلى: <b>${r.endArea}</b><br>المسافة: ${r.distance} كم`;
+
+    acceptBtn.style.display="inline-block";
+    rejectBtn.style.display="inline-block";
+
+    // **تنفيذ طلبك: عند قبول الرحلة**
+    acceptBtn.onclick=function(){
+        db.ref("rides/"+id).update({status:"مقبولة",driverPhone:driverPhone});
+        // يتم معالجة باقي الأمور في دالة handleAcceptedRide
+    };
+
+    rejectBtn.onclick=function(){
+        db.ref("rides/"+id).update({status:"مرفوضة"});
+        statusText.innerText="تم رفض الرحلة.";
+        acceptBtn.style.display="none";
+        rejectBtn.style.display="none";
+    };
+}
+
+function handleAcceptedRide(id,r){
+    currentRideId=id;
+    currentRideData=r;
+    
+    acceptBtn.style.display="none";
+    rejectBtn.style.display="none";
+    startRideBtn.style.display="inline-block"; // إظهار زر البدء
+    finishBtn.style.display="none"; // إخفاء زر الإنهاء مؤقتاً
+    wazeBtn.style.display="inline-block"; // إظهار زر ويز
+
+    removeAllRideMarkers();
+    
+    // **تنفيذ طلبك: إضافة مسار الراكب**
+    if(r.startLat && r.startLng && driverMarker){
+        let driverCoords=[driverMarker.getLatLng().lat, driverMarker.getLatLng().lng];
+        let passengerCoords=[r.startLat, r.startLng];
+        
+        // رسم مسار من موقع السائق إلى الراكب (نقطة البداية) - خط متقطع
+        pickupRoute=drawRoute([driverCoords, passengerCoords], '#4caf50', '10, 10'); 
+
+        // وضع مؤشر الراكب
+        passengerMarker=L.marker(passengerCoords).addTo(map).bindPopup("👤 موقع الراكب");
+        map.setView(passengerCoords, 14); // التركيز على الراكب
+
+    }
+
+    statusText.innerHTML=`تم قبول الرحلة. في طريقك للراكب...`;
+
+
+    // **تنفيذ طلبك: عند بدء الرحلة (زر جديد)**
+    startRideBtn.onclick=function(){
+        db.ref("rides/"+id).update({status:"بدأت"});
+        
+        // إظهار زر الإنهاء وإخفاء زر البدء
+        startRideBtn.style.display="none";
+        finishBtn.style.display="inline-block";
+
+        // **تنفيذ طلبك: إظهار رقم الراكب تشعبي**
+        statusText.innerHTML=`
+            الرحلة بدأت! رقم الراكب: 
+            <a href="tel:${r.passengerPhone}">
+                **${r.passengerPhone}**
+            </a>
+            <br>
+            الوجهة: **${r.endArea}**
+        `;
+
+        // **تنفيذ طلبك: مسار نقطة النهاية**
+        if(pickupRoute) map.removeLayer(pickupRoute); // مسح مسار القبول
+        
+        if(r.startLat && r.startLng && r.endLat && r.endLng){
+            let startCoords=[r.startLat, r.startLng];
+            let endCoords=[r.endLat, r.endLng];
+            
+            // رسم مسار من نقطة البداية إلى نقطة النهاية - خط صلب
+            destinationRoute=drawRoute([startCoords, endCoords], '#1e88e5');
+
+            // تحديث مؤشر الراكب ليكون في نقطة البداية
+            if(passengerMarker) map.removeLayer(passengerMarker);
+            passengerMarker=L.marker(startCoords).addTo(map).bindPopup("🟢 نقطة البداية").openPopup();
+            
+            // إضافة مؤشر لنقطة النهاية
+            L.marker(endCoords).addTo(map).bindPopup("🏁 نقطة النهاية");
+            map.fitBounds([startCoords, endCoords]); // التركيز على المسار الجديد
+        }
+    };
+    
+    // عند الضغط على إنهاء الرحلة
+    finishBtn.onclick=function(){
+        db.ref("rides/"+id).update({status:"منتهية"});
+        // مسح كل شيئ
+        removeAllRideMarkers();
+        finishBtn.style.display="none";
+        wazeBtn.style.display="none";
+        statusText.innerText="تم إنهاء الرحلة.";
+    };
+}
+</script>
+
+</body>
+</html>
