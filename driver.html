@@ -162,8 +162,11 @@ function removeAllRideMarkers(){
     
     // إزالة مؤشرات نقطة البداية والنهاية الأخرى
     map.eachLayer(layer => {
-        if (layer instanceof L.Marker && layer !== driverMarker && layer.getPopup().getContent().includes("نقطة النهاية")) {
-            map.removeLayer(layer);
+        if (layer instanceof L.Marker && layer !== driverMarker) {
+            const popupContent = layer.getPopup().getContent();
+            if (popupContent.includes("نقطة النهاية") || popupContent.includes("نقطة البداية")) {
+                map.removeLayer(layer);
+            }
         }
     });
 }
@@ -174,12 +177,24 @@ function drawRoute(coords, color, dashArray=''){
     return route;
 }
 
-// فتح Waze
+// دالة Waze الموحدة التي تحدد الوجهة بناءً على حالة الرحلة
 function openWaze(){
-    if(currentRideData && currentRideData.startLat && currentRideData.startLng){
-        // استخدام إحداثيات نقطة انطلاق الراكب كوجهة في Waze
-        let lat=currentRideData.startLat;
-        let lng=currentRideData.startLng;
+    if(!currentRideData) return;
+
+    let lat, lng;
+    
+    // إذا كانت مقبولة، اذهب إلى موقع الراكب (نقطة البداية)
+    if (currentRideData.status === "مقبولة") {
+        lat = currentRideData.startLat;
+        lng = currentRideData.startLng;
+    } 
+    // إذا كانت بدأت، اذهب إلى الوجهة (نقطة النهاية)
+    else if (currentRideData.status === "بدأت") {
+        lat = currentRideData.endLat;
+        lng = currentRideData.endLng;
+    }
+
+    if(lat && lng){
         window.open(`https://www.waze.com/ul?ll=${lat},${lng}&navigate=yes`, '_blank');
     }
 }
@@ -189,9 +204,10 @@ function openWaze(){
 const statusText=document.getElementById("status");
 const acceptBtn=document.getElementById("acceptBtn");
 const rejectBtn=document.getElementById("rejectBtn");
-const startRideBtn=document.getElementById("startRideBtn"); // الزر الجديد
+const startRideBtn=document.getElementById("startRideBtn"); 
 const finishBtn=document.getElementById("finishBtn");
 const wazeBtn=document.getElementById("wazeBtn");
+const logoutBtn=document.getElementById("logoutBtn");
 
 db.ref("rides").on("value",snap=>{
     let data=snap.val();
@@ -201,6 +217,7 @@ db.ref("rides").on("value",snap=>{
 
     Object.keys(data).forEach(id=>{
         let r=data[id];
+        
         // معالجة الطلبات الجديدة
         if(r.status==="جديدة" && !rideFound){
             rideFound=true;
@@ -211,7 +228,7 @@ db.ref("rides").on("value",snap=>{
              rideFound=true;
              handleAcceptedRide(id,r);
         }
-        // معالجة الرحلات التي بدأت
+        // معالجة الرحلات التي بدأت حالياً
         else if(r.status==="بدأت" && r.driverPhone===driverPhone){
              rideFound=true;
              handleStartedRide(id,r);
@@ -219,6 +236,7 @@ db.ref("rides").on("value",snap=>{
     });
 
     if(!rideFound){
+        // حالة عدم وجود أي طلبات أو رحلات نشطة
         removeAllRideMarkers();
         currentRideId=null;
         currentRideData=null;
@@ -227,6 +245,10 @@ db.ref("rides").on("value",snap=>{
         startRideBtn.style.display="none";
         finishBtn.style.display="none";
         wazeBtn.style.display="none";
+        
+        // إظهار زر تسجيل الخروج في وضع الانتظار
+        logoutBtn.style.display="inline-block"; 
+        
         statusText.innerText="في انتظار الطلبات...";
     }
 });
@@ -238,22 +260,32 @@ function showRideRequest(id,r){
     // إخفاء الأزرار المتبقية
     startRideBtn.style.display="none";
     finishBtn.style.display="none";
-    wazeBtn.style.display="none"; // إخفاء ويز في مرحلة الطلب
+    wazeBtn.style.display="none";
+    logoutBtn.style.display="inline-block"; // إظهار تسجيل الخروج
     removeAllRideMarkers();
+
+    // **تنفيذ طلبك: حساب وعرض الأجرة**
+    const distance = parseFloat(r.distance) || 0;
+    const fare = Math.round(distance * 1000); // 1000 دينار لكل كم
+    const formattedFare = fare.toLocaleString('ar-IQ') || '...';
 
 
     statusText.innerHTML=
-      `🚖 طلب جديد<br>من: <b>${r.startArea}</b><br>إلى: <b>${r.endArea}</b><br>المسافة: ${r.distance} كم`;
+      `🚖 طلب جديد<br>
+       من: <b>${r.startArea}</b><br>
+       إلى: <b>${r.endArea}</b><br>
+       المسافة: **${r.distance} كم**<br>
+       **الأجرة المتوقعة: ${formattedFare} د.ع**`; // عرض الأجرة والمسافة
 
     acceptBtn.style.display="inline-block";
     rejectBtn.style.display="inline-block";
 
-    // **تنفيذ طلبك: عند قبول الرحلة**
+    // عند قبول الرحلة
     acceptBtn.onclick=function(){
         db.ref("rides/"+id).update({status:"مقبولة",driverPhone:driverPhone});
-        // يتم معالجة باقي الأمور في دالة handleAcceptedRide
     };
 
+    // عند رفض الرحلة
     rejectBtn.onclick=function(){
         db.ref("rides/"+id).update({status:"مرفوضة"});
         statusText.innerText="تم رفض الرحلة.";
@@ -266,15 +298,17 @@ function handleAcceptedRide(id,r){
     currentRideId=id;
     currentRideData=r;
     
+    // إظهار الأزرار ذات الصلة وإخفاء البقية
     acceptBtn.style.display="none";
     rejectBtn.style.display="none";
-    startRideBtn.style.display="inline-block"; // إظهار زر البدء
-    finishBtn.style.display="none"; // إخفاء زر الإنهاء مؤقتاً
+    startRideBtn.style.display="inline-block"; 
+    finishBtn.style.display="none"; 
     wazeBtn.style.display="inline-block"; // إظهار زر ويز
+    logoutBtn.style.display="none"; // **إخفاء زر تسجيل الخروج**
 
     removeAllRideMarkers();
     
-    // **تنفيذ طلبك: إضافة مسار الراكب**
+    // إضافة مسار الراكب
     if(r.startLat && r.startLng && driverMarker){
         let driverCoords=[driverMarker.getLatLng().lat, driverMarker.getLatLng().lng];
         let passengerCoords=[r.startLat, r.startLng];
@@ -285,21 +319,20 @@ function handleAcceptedRide(id,r){
         // وضع مؤشر الراكب
         passengerMarker=L.marker(passengerCoords).addTo(map).bindPopup("👤 موقع الراكب");
         map.setView(passengerCoords, 14); // التركيز على الراكب
+
     }
 
     statusText.innerHTML=`تم قبول الرحلة. في طريقك للراكب...`;
 
 
-    // **تنفيذ طلبك: عند بدء الرحلة (زر جديد)**
+    // عند الضغط على بدء الرحلة
     startRideBtn.onclick=function(){
         db.ref("rides/"+id).update({status:"بدأت"});
-        // سيتم معالجة التحديث في دالة handleStartedRide بناءً على تغيير الحالة في قاعدة البيانات
     };
     
     // عند الضغط على إنهاء الرحلة
     finishBtn.onclick=function(){
         db.ref("rides/"+id).update({status:"منتهية"});
-        // مسح كل شيئ سيتم في الحلقة الرئيسية عند اختفاء الطلب
     };
 }
 
@@ -307,15 +340,17 @@ function handleStartedRide(id,r){
     currentRideId=id;
     currentRideData=r;
     
+    // إظهار الأزرار ذات الصلة وإخفاء البقية
     acceptBtn.style.display="none";
     rejectBtn.style.display="none";
     startRideBtn.style.display="none";
     finishBtn.style.display="inline-block"; // إظهار زر الإنهاء
     wazeBtn.style.display="inline-block"; // إظهار زر ويز
+    logoutBtn.style.display="none"; // **إخفاء زر تسجيل الخروج**
 
     removeAllRideMarkers(); // مسح أي مسارات سابقة (مثل مسار القبول)
 
-    // **تنفيذ طلبك: إظهار رقم الراكب تشعبي**
+    // إظهار رقم الراكب تشعبي
     statusText.innerHTML=`
         الرحلة بدأت!
         <a href="tel:${r.passengerPhone}" class="phone-link">
@@ -324,9 +359,7 @@ function handleStartedRide(id,r){
         الوجهة: **${r.endArea}**
     `;
 
-    // **تنفيذ طلبك: مسار نقطة النهاية**
-    if(pickupRoute) map.removeLayer(pickupRoute); // مسح مسار القبول
-    
+    // مسار نقطة النهاية
     if(r.startLat && r.startLng && r.endLat && r.endLng){
         let startCoords=[r.startLat, r.startLng];
         let endCoords=[r.endLat, r.endLng];
@@ -342,13 +375,9 @@ function handleStartedRide(id,r){
         map.fitBounds([startCoords, endCoords]); // التركيز على المسار الجديد
     }
 
-    // تعديل وظيفة Waze لتوجه إلى نقطة النهاية بعد بدء الرحلة
-    wazeBtn.onclick=function(){
-        if(r.endLat && r.endLng){
-            let lat=r.endLat;
-            let lng=r.endLng;
-            window.open(`https://www.waze.com/ul?ll=${lat},${lng}&navigate=yes`, '_blank');
-        }
+    // عند الضغط على إنهاء الرحلة
+    finishBtn.onclick=function(){
+        db.ref("rides/"+id).update({status:"منتهية"});
     };
 }
 </script>
