@@ -222,6 +222,7 @@ async function startMonitoringDriver(driverPhone, startLat, startLng, endLat, en
 
         // تحديث مؤشر السائق
         if(driverMarker) map.removeLayer(driverMarker);
+        // **استخدام أيقونة التاكسي المميزة**
         driverMarker = L.marker(driverCoords, {
             icon: L.divIcon({
                 className: 'custom-driver-icon',
@@ -233,7 +234,6 @@ async function startMonitoringDriver(driverPhone, startLat, startLng, endLat, en
         // منطق رسم المسار - استخدام دالة drawStreetRoute
         if (rideStatus === "مقبولة" && startLat && startLng) {
             // المسار من السائق إلى الراكب (نقطة البداية)
-            // استخدام الإحداثيات المنفصلة كنقاط مسار
             await drawStreetRoute(d.lat, d.lng, startLat, startLng, '#4CAF50', '5, 5'); 
         } else if (rideStatus === "بدأت" && startLat && startLng && endLat && endLng) {
             // المسار من الراكب إلى الوجهة
@@ -268,6 +268,12 @@ function startMonitoringRide(id){
         
         let statusHtml = `المسافة: **${distance} كم** — الأجرة: **${fare} د.ع**<br>`;
         
+        // **إعداد رابط الاتصال بالسائق ليتم استخدامه في الحالتين (مقبولة وبدأت)**
+        let driverPhoneHtml = '';
+        if (r.driverPhone) {
+            driverPhoneHtml = `<a href="tel:${r.driverPhone}" class="phone-link">📞 اتصل بالسائق: ${r.driverPhone}</a>`;
+        }
+        
         // معالجة الحالات
         if (r.status === "جديدة") {
             document.getElementById("status").innerHTML=`✅ تم الإرسال. في انتظار قبول السائق...<br>` + statusHtml;
@@ -275,10 +281,7 @@ function startMonitoringRide(id){
             clearRideMarkers();
             
         } else if (r.status === "مقبولة" && r.driverPhone) {
-            // إضافة رقم هاتف السائق كرابط اتصال عند القبول
-            let driverPhoneHtml = `<a href="tel:${r.driverPhone}" class="phone-link">📞 اتصل بالسائق: ${r.driverPhone}</a>`;
             
-            // استخدام الاسم المختصر في الرسالة
             const shortStartArea = getShortAreaName(r.startArea);
             document.getElementById("status").innerHTML=`🚖 تم قبول الرحلة! السائق قادم إليك (${shortStartArea}).<br>` + statusHtml + driverPhoneHtml;
             driverInfoDiv.style.display='block';
@@ -294,9 +297,9 @@ function startMonitoringRide(id){
             }
             
         } else if (r.status === "بدأت") {
-             // إخفاء رابط الاتصال، تحديث الرسالة
+             // **إظهار رابط الاتصال مجدداً وتحديث الرسالة**
              const shortEndArea = getShortAreaName(r.endArea);
-             document.getElementById("status").innerHTML=`🚦 الرحلة بدأت! في طريقك إلى **${shortEndArea}**<br>` + statusHtml;
+             document.getElementById("status").innerHTML=`🚦 الرحلة بدأت! في طريقك إلى **${shortEndArea}**<br>` + statusHtml + driverPhoneHtml; // تمت إضافة رابط الاتصال
              driverInfoDiv.style.display='block';
 
              // تحديث مسار السائق إلى نقطة النهاية
