@@ -119,6 +119,7 @@ const searchInput=document.getElementById('searchInput');
 const searchResultsUl=document.getElementById('searchResults');
 const searchContainer=document.getElementById('searchContainer');
 const driverInfoDiv=document.getElementById('driverInfo');
+const logoutBtn=document.getElementById('logoutBtn'); // إضافة مرجع زر تسجيل الخروج
 
 const SEARCH_DELAY=500;
 let searchInputTimer=null;
@@ -206,6 +207,7 @@ function cleanupRide(){
     searchContainer.style.display='block';
     driverInfoDiv.style.display='none';
     driverInfoDiv.innerHTML = '';
+    logoutBtn.style.display='inline-block'; // إظهار زر تسجيل الخروج
 }
 
 async function startMonitoringDriver(driverPhone, startLat, startLng, endLat, endLng, rideStatus){
@@ -279,6 +281,7 @@ function startMonitoringRide(id){
             document.getElementById("status").innerHTML=`✅ تم الإرسال. في انتظار قبول السائق...<br>` + statusHtml;
             driverInfoDiv.style.display='none';
             clearRideMarkers();
+            logoutBtn.style.display='inline-block'; // إظهار الزر
             
         } else if (r.status === "مقبولة" && r.driverPhone) {
             
@@ -295,6 +298,7 @@ function startMonitoringRide(id){
                 // تحديث المسار حتى لو لم يتغير السائق
                 startMonitoringDriver(r.driverPhone, r_startLat, r_startLng, r_endLat, r_endLng, r.status);
             }
+            logoutBtn.style.display='none'; // إخفاء زر تسجيل الخروج
             
         } else if (r.status === "بدأت") {
              // **إظهار رابط الاتصال مجدداً وتحديث الرسالة**
@@ -310,10 +314,11 @@ function startMonitoringRide(id){
             } else if(driverRef) {
                 startMonitoringDriver(r.driverPhone, r_startLat, r_startLng, r_endLat, r_endLng, r.status);
             }
+            logoutBtn.style.display='none'; // إخفاء زر تسجيل الخروج
              
         } else if (r.status === "منتهية" || r.status === "ملغاة" || r.status === "مرفوضة") {
             document.getElementById("status").innerHTML=`الرحلة **${r.status}**.`;
-            cleanupRide();
+            cleanupRide(); 
         }
     });
 }
