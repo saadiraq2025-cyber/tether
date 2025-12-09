@@ -13,22 +13,56 @@
 
 <style>
 body,html{margin:0;padding:0;height:100%;font-family:Tahoma;}
-#map{height:60vh;}
+
+/* تغييرات التخطيط للويب فيو */
+#map{height:100vh; width:100%; position:relative;} /* الخريطة تملأ الشاشة بالكامل */
 #panel{
-    background:#fff;padding:10px;text-align:center;
-    box-shadow:0 -2px 5px rgba(0,0,0,0.2);
+    /* لجعل اللوحة عائمة فوق الخريطة */
+    position: absolute;
+    top: 50%; /* تبدأ من المنتصف */
+    left: 10px; /* على اليسار */
+    transform: translateY(-50%); /* تحريكها للأعلى لتكون في المنتصف */
+    z-index: 1000;
+    
+    background:rgba(255,255,255,0.9); /* خلفية شبه شفافة */
+    padding:10px;
+    text-align:center;
+    box-shadow:0 0 10px rgba(0,0,0,0.5);
+    border-radius:10px;
+    max-width:200px; /* لتقييد عرض اللوحة */
 }
+
+/* تعديل عرض الأزرار لتكون أكثر ملاءمة للعمود */
 button{
-    background:#ffb300;border:none;padding:10px 20px;
-    border-radius:8px;margin:5px;font-weight:bold;
+    background:#ffb300;border:none;padding:10px;
+    border-radius:8px;margin:5px 0; /* مسافة عمودية */
+    font-weight:bold;
     cursor:pointer;
+    width:100%; /* الأزرار بعرض كامل داخل اللوحة */
+    box-sizing: border-box;
 }
+
+/* الأزرار الخاصة */
 #logoutBtn{
-    background:#455a64;color:white;margin-top:10px;width:95%;
+    background:#455a64;color:white;margin-top:10px;
+    font-size: small; /* تصغير حجم خط زر الخروج */
 }
 #wazeBtn{
     background:#1E90FF;color:white;
 }
+
+/* تنسيق لعرض رقم الهاتف بشكل أفضل */
+.phone-link {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: bold;
+    display: block;
+    margin-top: 5px;
+}
+.phone-link:hover {
+    text-decoration: underline;
+}
+
 </style>
 </head>
 <body>
@@ -37,10 +71,10 @@ button{
 
 <div id="panel">
     <h3>🚖 وضع السائق</h3>
-    <p id="status">في انتظار الطلبات...</p>
     
     <button id="wazeBtn" style="display:none;" onclick="openWaze()">ويز حدث 🗺️</button>
-    <br>
+    
+    <p id="status">في انتظار الطلبات...</p>
 
     <button id="acceptBtn" style="display:none;background:#4caf50;color:white;">قبول الرحلة</button>
     <button id="rejectBtn" style="display:none;background:#e53935;color:white;">رفض الرحلة</button>
@@ -125,6 +159,13 @@ function removeAllRideMarkers(){
     passengerMarker=null;
     pickupRoute=null;
     destinationRoute=null;
+    
+    // إزالة مؤشرات نقطة البداية والنهاية الأخرى
+    map.eachLayer(layer => {
+        if (layer instanceof L.Marker && layer !== driverMarker && layer.getPopup().getContent().includes("نقطة النهاية")) {
+            map.removeLayer(layer);
+        }
+    });
 }
 
 // عرض مسار (polyline) بسيط بين نقطتين (للتوضيح، يجب استخدام خدمة مسارات حقيقية)
@@ -170,6 +211,11 @@ db.ref("rides").on("value",snap=>{
              rideFound=true;
              handleAcceptedRide(id,r);
         }
+        // معالجة الرحلات التي بدأت
+        else if(r.status==="بدأت" && r.driverPhone===driverPhone){
+             rideFound=true;
+             handleStartedRide(id,r);
+        }
     });
 
     if(!rideFound){
@@ -192,7 +238,7 @@ function showRideRequest(id,r){
     // إخفاء الأزرار المتبقية
     startRideBtn.style.display="none";
     finishBtn.style.display="none";
-    wazeBtn.style.display="none";
+    wazeBtn.style.display="none"; // إخفاء ويز في مرحلة الطلب
     removeAllRideMarkers();
 
 
@@ -239,7 +285,6 @@ function handleAcceptedRide(id,r){
         // وضع مؤشر الراكب
         passengerMarker=L.marker(passengerCoords).addTo(map).bindPopup("👤 موقع الراكب");
         map.setView(passengerCoords, 14); // التركيز على الراكب
-
     }
 
     statusText.innerHTML=`تم قبول الرحلة. في طريقك للراكب...`;
@@ -248,49 +293,62 @@ function handleAcceptedRide(id,r){
     // **تنفيذ طلبك: عند بدء الرحلة (زر جديد)**
     startRideBtn.onclick=function(){
         db.ref("rides/"+id).update({status:"بدأت"});
-        
-        // إظهار زر الإنهاء وإخفاء زر البدء
-        startRideBtn.style.display="none";
-        finishBtn.style.display="inline-block";
-
-        // **تنفيذ طلبك: إظهار رقم الراكب تشعبي**
-        statusText.innerHTML=`
-            الرحلة بدأت! رقم الراكب: 
-            <a href="tel:${r.passengerPhone}">
-                **${r.passengerPhone}**
-            </a>
-            <br>
-            الوجهة: **${r.endArea}**
-        `;
-
-        // **تنفيذ طلبك: مسار نقطة النهاية**
-        if(pickupRoute) map.removeLayer(pickupRoute); // مسح مسار القبول
-        
-        if(r.startLat && r.startLng && r.endLat && r.endLng){
-            let startCoords=[r.startLat, r.startLng];
-            let endCoords=[r.endLat, r.endLng];
-            
-            // رسم مسار من نقطة البداية إلى نقطة النهاية - خط صلب
-            destinationRoute=drawRoute([startCoords, endCoords], '#1e88e5');
-
-            // تحديث مؤشر الراكب ليكون في نقطة البداية
-            if(passengerMarker) map.removeLayer(passengerMarker);
-            passengerMarker=L.marker(startCoords).addTo(map).bindPopup("🟢 نقطة البداية").openPopup();
-            
-            // إضافة مؤشر لنقطة النهاية
-            L.marker(endCoords).addTo(map).bindPopup("🏁 نقطة النهاية");
-            map.fitBounds([startCoords, endCoords]); // التركيز على المسار الجديد
-        }
+        // سيتم معالجة التحديث في دالة handleStartedRide بناءً على تغيير الحالة في قاعدة البيانات
     };
     
     // عند الضغط على إنهاء الرحلة
     finishBtn.onclick=function(){
         db.ref("rides/"+id).update({status:"منتهية"});
-        // مسح كل شيئ
-        removeAllRideMarkers();
-        finishBtn.style.display="none";
-        wazeBtn.style.display="none";
-        statusText.innerText="تم إنهاء الرحلة.";
+        // مسح كل شيئ سيتم في الحلقة الرئيسية عند اختفاء الطلب
+    };
+}
+
+function handleStartedRide(id,r){
+    currentRideId=id;
+    currentRideData=r;
+    
+    acceptBtn.style.display="none";
+    rejectBtn.style.display="none";
+    startRideBtn.style.display="none";
+    finishBtn.style.display="inline-block"; // إظهار زر الإنهاء
+    wazeBtn.style.display="inline-block"; // إظهار زر ويز
+
+    removeAllRideMarkers(); // مسح أي مسارات سابقة (مثل مسار القبول)
+
+    // **تنفيذ طلبك: إظهار رقم الراكب تشعبي**
+    statusText.innerHTML=`
+        الرحلة بدأت!
+        <a href="tel:${r.passengerPhone}" class="phone-link">
+            📞 اتصل بالراكب: ${r.passengerPhone}
+        </a>
+        الوجهة: **${r.endArea}**
+    `;
+
+    // **تنفيذ طلبك: مسار نقطة النهاية**
+    if(pickupRoute) map.removeLayer(pickupRoute); // مسح مسار القبول
+    
+    if(r.startLat && r.startLng && r.endLat && r.endLng){
+        let startCoords=[r.startLat, r.startLng];
+        let endCoords=[r.endLat, r.endLng];
+        
+        // رسم مسار من نقطة البداية إلى نقطة النهاية - خط صلب
+        destinationRoute=drawRoute([startCoords, endCoords], '#1e88e5');
+
+        // تحديث مؤشر الراكب ليكون في نقطة البداية
+        passengerMarker=L.marker(startCoords).addTo(map).bindPopup("🟢 نقطة البداية").openPopup();
+        
+        // إضافة مؤشر لنقطة النهاية
+        L.marker(endCoords).addTo(map).bindPopup("🏁 نقطة النهاية");
+        map.fitBounds([startCoords, endCoords]); // التركيز على المسار الجديد
+    }
+
+    // تعديل وظيفة Waze لتوجه إلى نقطة النهاية بعد بدء الرحلة
+    wazeBtn.onclick=function(){
+        if(r.endLat && r.endLng){
+            let lat=r.endLat;
+            let lng=r.endLng;
+            window.open(`https://www.waze.com/ul?ll=${lat},${lng}&navigate=yes`, '_blank');
+        }
     };
 }
 </script>
