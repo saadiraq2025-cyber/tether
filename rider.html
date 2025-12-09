@@ -123,7 +123,7 @@ const driverInfoDiv=document.getElementById('driverInfo');
 const SEARCH_DELAY=500;
 let searchInputTimer=null;
 
-// ---------------- وظائف المراقبة والتنظيف ----------------
+// ---------------- وظائف المراقبة والتنظيف والمسار ----------------
 
 function clearRideMarkers(){
     // يتم إزالة مؤشر السائق والمسار المرسوم
@@ -133,14 +133,42 @@ function clearRideMarkers(){
     driverRoute = null;
 }
 
-// دالة رسم مسار بسيط (Polyline)
-function drawRoute(coords, color, dashArray=''){
-    clearRideMarkers(); 
-    driverRoute = L.polyline(coords,{color:color,dashArray:dashArray,weight:5}).addTo(map);
-    map.fitBounds(driverRoute.getBounds());
+// دالة رسم مسار حقيقي على الشوارع باستخدام OSRM
+async function drawStreetRoute(lat1, lng1, lat2, lng2, color, dashArray = '') {
+    // خدمة OSRM تتطلب الإحداثيات بصيغة: lng,lat
+    const OSRM_URL = `https://router.project-osrm.org/route/v1/driving/${lng1},${lat1};${lng2},${lat2}?geometries=geojson&overview=full`;
     
-    // ملاحظة: هذا مسار مستقيم. يتطلب رسم مسار حقيقي استخدام API خارجي.
+    // إزالة المسار الحالي قبل الرسم
+    clearRideMarkers(); 
+    
+    try {
+        const response = await fetch(OSRM_URL);
+        const data = await response.json();
+
+        if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+            console.error('OSRM route calculation failed or no route found. Falling back to straight line.');
+            // العودة إلى الرسم البسيط في حال الفشل
+            driverRoute = L.polyline([[lat1, lng1], [lat2, lng2]], { color: color, dashArray: dashArray, weight: 5 }).addTo(map);
+        } else {
+            // استخراج إحداثيات المسار من الاستجابة (بصيغة GeoJSON: [lng, lat])
+            const geojsonCoords = data.routes[0].geometry.coordinates;
+
+            // تحويل الإحداثيات إلى صيغة Leaflet ([lat, lng])
+            const leafletCoords = geojsonCoords.map(coord => [coord[1], coord[0]]);
+
+            driverRoute = L.polyline(leafletCoords, { color: color, dashArray: dashArray, weight: 5 }).addTo(map);
+        }
+        
+        map.fitBounds(driverRoute.getBounds());
+
+    } catch (error) {
+        console.error('Error fetching route from OSRM. Falling back to straight line.', error);
+        // العودة إلى الرسم البسيط في حال الفشل
+        driverRoute = L.polyline([[lat1, lng1], [lat2, lng2]], { color: color, dashArray: dashArray, weight: 5 }).addTo(map);
+        map.fitBounds(driverRoute.getBounds());
+    }
 }
+
 
 function cleanupRide(){
     if(rideRef) rideRef.off();
@@ -158,10 +186,10 @@ function cleanupRide(){
     driverInfoDiv.innerHTML = '';
 }
 
-function startMonitoringDriver(driverPhone, targetLat, targetLng, rideStatus){
+async function startMonitoringDriver(driverPhone, startLat, startLng, endLat, endLng, rideStatus){
     driverRef = db.ref("drivers/"+driverPhone);
     
-    driverRef.on('value', snap => {
+    driverRef.on('value', async snap => { // جعل on('value') غير متزامنة
         const d = snap.val();
         if(!d || !d.lat || !d.lng) return;
 
@@ -180,13 +208,14 @@ function startMonitoringDriver(driverPhone, targetLat, targetLng, rideStatus){
             })
         }).addTo(map).bindPopup("السائق").openPopup();
         
-        // منطق رسم المسار
-        if (rideStatus === "مقبولة" && startCoords) {
+        // منطق رسم المسار - استخدام دالة drawStreetRoute
+        if (rideStatus === "مقبولة" && startLat && startLng) {
             // المسار من السائق إلى الراكب (نقطة البداية)
-            drawRoute([driverCoords, startCoords], '#4CAF50', '5, 5'); 
-        } else if (rideStatus === "بدأت" && startCoords && endCoords) {
+            // استخدام الإحداثيات المنفصلة كنقاط مسار
+            await drawStreetRoute(d.lat, d.lng, startLat, startLng, '#4CAF50', '5, 5'); 
+        } else if (rideStatus === "بدأت" && startLat && startLng && endLat && endLng) {
             // المسار من الراكب إلى الوجهة
-            drawRoute([startCoords, endCoords], '#1E90FF'); 
+            await drawStreetRoute(startLat, startLng, endLat, endLng, '#1E90FF'); 
         }
     });
 }
@@ -205,6 +234,12 @@ function startMonitoringRide(id){
             document.getElementById("status").innerHTML=`⚠️ انتهت الرحلة أو ألغيت من النظام.`;
             return;
         }
+        
+        // جلب الإحداثيات الجديدة من قاعدة البيانات
+        const r_startLat = r.startLat;
+        const r_startLng = r.startLng;
+        const r_endLat = r.endLat;
+        const r_endLng = r.endLng;
 
         const distance = r.distance || 0;
         const fare = r.fare ? r.fare.toLocaleString('ar-IQ') : '---';
@@ -228,7 +263,10 @@ function startMonitoringRide(id){
             if (r.driverPhone !== currentDriverPhone) {
                 if(driverRef) driverRef.off(); 
                 currentDriverPhone = r.driverPhone;
-                startMonitoringDriver(r.driverPhone, r.startLat, r.startLng, r.status);
+                startMonitoringDriver(r.driverPhone, r_startLat, r_startLng, r_endLat, r_endLng, r.status);
+            } else if(driverRef) {
+                // تحديث المسار حتى لو لم يتغير السائق
+                startMonitoringDriver(r.driverPhone, r_startLat, r_startLng, r_endLat, r_endLng, r.status);
             }
             
         } else if (r.status === "بدأت") {
@@ -240,9 +278,9 @@ function startMonitoringRide(id){
              if (r.driverPhone !== currentDriverPhone) {
                 if(driverRef) driverRef.off(); 
                 currentDriverPhone = r.driverPhone;
-                startMonitoringDriver(r.driverPhone, r.endLat, r.endLng, r.status);
+                startMonitoringDriver(r.driverPhone, r_startLat, r_startLng, r_endLat, r_endLng, r.status);
             } else if(driverRef) {
-                startMonitoringDriver(r.driverPhone, r.endLat, r.endLng, r.status);
+                startMonitoringDriver(r.driverPhone, r_startLat, r_startLng, r_endLat, r_endLng, r.status);
             }
              
         } else if (r.status === "منتهية" || r.status === "ملغاة" || r.status === "مرفوضة") {
