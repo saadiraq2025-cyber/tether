@@ -183,6 +183,52 @@ let destinationRoute=null; // مسار نقطة النهاية (من الراك�
 let currentRideData=null;
 // ===========================================
 
+// ⭐⭐ متغيرات دالة الجرس/الرنين ⭐⭐
+let audioContext = null;
+let oscillator = null;
+let ringingTimeout = null;
+
+function startRinging() {
+    // إيقاف أي رنين سابق قبل البدء
+    stopRinging(); 
+
+    // تهيئة واجهة Web Audio API
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    // إنشاء مذبذب (Oscillator) لتوليد نغمة
+    oscillator = audioContext.createOscillator();
+    // ضبط التردد (نغمة الجرس)
+    oscillator.frequency.setValueAtTime(440, audioContext.currentTime); 
+    // توصيل المذبذب بمخرج الصوت الرئيسي
+    oscillator.connect(audioContext.destination);
+
+    // البدء بالرنين
+    oscillator.start();
+
+    // إيقاف الرنين تلقائياً بعد 15 ثانية
+    ringingTimeout = setTimeout(() => {
+        stopRinging();
+    }, 15000); 
+    
+    console.log("🔔 بدأ الرنين لمدة 15 ثانية.");
+}
+
+function stopRinging() {
+    if (oscillator) {
+        oscillator.stop();
+        oscillator.disconnect();
+        oscillator = null;
+        console.log("🔔 تم إيقاف الرنين.");
+    }
+    if (ringingTimeout) {
+        clearTimeout(ringingTimeout);
+        ringingTimeout = null;
+    }
+}
+// ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
 // دالة لحساب ارتفاع لوحة التحكم وتعيين ارتفاع الخريطة 
 function updateMapHeight() {
     const panelHeight = panelElement.offsetHeight;
@@ -296,7 +342,7 @@ function openWaze(){
     }
 }
 
-// ⭐⭐ الدالة الجديدة: استخلاص الاسم الأقصر للمنطقة ⭐⭐
+// الدالة: استخلاص الاسم الأقصر للمنطقة 
 function getShortAreaName(fullArea) {
     if (!fullArea) return "منطقة غير معروفة";
     const parts = fullArea.split(',').map(p => p.trim()).filter(p => p.length > 0);
@@ -317,8 +363,7 @@ function getShortAreaName(fullArea) {
     // إذا لم تنجح الفلترة، نأخذ الجزء الأخير (الأقصر والأكثر احتمالاً أن يكون اسم الحي)
     return parts[parts.length - 1]; 
 }
-// ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
-
+// ===============================================
 
 // استقبال الطلبات
 const statusText=document.getElementById("status");
@@ -360,6 +405,9 @@ db.ref("rides").on("value",snap=>{
     });
 
     if(!rideFound){
+        // ⭐⭐ إيقاف الرنين عند عدم وجود طلب نشط ⭐⭐
+        stopRinging(); 
+
         removeAllRideMarkers();
         currentRideId=null;
         currentRideData=null;
@@ -385,6 +433,9 @@ function showRideRequest(id,r){
     currentRideId=id;
     currentRideData=r;
     
+    // ⭐⭐ بدء الرنين عند ورود طلب جديد ⭐⭐
+    startRinging();
+
     // إخفاء الأزرار المتبقية والعائمة
     startRideBtn.style.display="none";
     finishBtn.style.display="none";
@@ -403,10 +454,9 @@ function showRideRequest(id,r){
     const fare = r.fare || Math.round(distance * 1000); // 1000 دينار لكل كم
     const formattedFare = fare.toLocaleString('ar-IQ') || '...';
     
-    // ⭐⭐ استخدام الدالة الجديدة لعرض مختصر ⭐⭐
+    // استخدام الدالة الجديدة لعرض مختصر 
     const shortStartArea = getShortAreaName(r.startArea);
     const shortEndArea = getShortAreaName(r.endArea);
-    // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
 
     statusText.innerHTML=
       `🚖 طلب جديد<br>
@@ -419,11 +469,15 @@ function showRideRequest(id,r){
 
     // عند قبول الرحلة
     acceptBtn.onclick=function(){
+        // ⭐⭐ إيقاف الرنين عند القبول ⭐⭐
+        stopRinging(); 
         db.ref("rides/"+id).update({status:"مقبولة",driverPhone:driverPhone});
     };
 
     // عند رفض الرحلة
     rejectBtn.onclick=function(){
+        // ⭐⭐ إيقاف الرنين عند الرفض ⭐⭐
+        stopRinging();
         db.ref("rides/"+id).update({status:"مرفوضة"});
         statusText.innerText="تم رفض الرحلة.";
         acceptBtn.style.display="none";
@@ -475,10 +529,9 @@ async function handleAcceptedRide(id,r){
         map.setView([r.startLat, r.startLng], 14); // التركيز على الراكب
     }
 
-    // ⭐⭐ استخدام الدالة الجديدة لعرض مختصر ⭐⭐
+    // استخدام الدالة الجديدة لعرض مختصر 
     const shortStartArea = getShortAreaName(r.startArea);
     statusText.innerHTML=`تم قبول الرحلة. في طريقك للراكب **(${shortStartArea})**...`;
-    // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
 
 
     // زر بدء الرحلة يقوم فقط بتحديث الحالة
@@ -523,10 +576,9 @@ async function handleStartedRide(id,r){
         </a>
     `;
     
-    // ⭐⭐ استخدام الدالة الجديدة لعرض مختصر ⭐⭐
+    // استخدام الدالة الجديدة لعرض مختصر 
     const shortEndArea = getShortAreaName(r.endArea);
     statusText.innerHTML=`الرحلة بدأت! الوجهة: **${shortEndArea}**`;
-    // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
     
     // مسار نقطة النهاية (من نقطة البداية إلى نقطة الوصول)
     if(r.startLat && r.startLng && r.endLat && r.endLng){
