@@ -109,9 +109,7 @@ button {
 }
 </style>
 </head>
-<body>
-
-<div id="map"></div>
+<body onclick="initializeAudioContext()"> <div id="map"></div>
 
 <div id="floatingControls" style="display:none;">
     <button id="startRideBtn" style="display:none;">بدء الرحلة 🚦</button> 
@@ -187,29 +185,58 @@ let currentRideData=null;
 let audioContext = null;
 let oscillator = null;
 let ringingTimeout = null;
+let isAudioContextInitialized = false;
+
+// ⭐⭐ الدالة الجديدة لتهيئة سياق الصوت عند أول تفاعل ⭐⭐
+function initializeAudioContext() {
+    if (isAudioContextInitialized) return;
+
+    try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        isAudioContextInitialized = true;
+        console.log("✅ AudioContext initialized on user interaction.");
+    } catch (e) {
+        console.error("AudioContext initialization failed:", e);
+    }
+    // إزالة مستمع الحدث بعد التهيئة
+    document.body.onclick = null;
+}
 
 function startRinging() {
+    // يجب أن يكون AudioContext مهيأ قبل التشغيل
+    if (!isAudioContextInitialized) {
+        console.warn("AudioContext not initialized yet. Waiting for user interaction.");
+        return; 
+    }
+    
     // إيقاف أي رنين سابق قبل البدء
     stopRinging(); 
 
-    // تهيئة واجهة Web Audio API
-    if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    }
-
     // إنشاء مذبذب (Oscillator) لتوليد نغمة
     oscillator = audioContext.createOscillator();
-    // ضبط التردد (نغمة الجرس)
+    // استخدام نغمة مسموعة ومميزة (A4)
     oscillator.frequency.setValueAtTime(440, audioContext.currentTime); 
-    // توصيل المذبذب بمخرج الصوت الرئيسي
-    oscillator.connect(audioContext.destination);
+    
+    // إنشاء كسب (Gain) للتحكم في الصوت وتجنب النقرات عند التوقف
+    const gainNode = audioContext.createGain();
+    gainNode.gain.setValueAtTime(0.5, audioContext.currentTime); // مستوى صوت 50%
+    
+    // توصيل المذبذب بـ Gain ثم بمخرج الصوت الرئيسي
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
 
-    // البدء بالرنين
-    oscillator.start();
+    // البدء بالرنين فوراً
+    oscillator.start(0);
 
     // إيقاف الرنين تلقائياً بعد 15 ثانية
     ringingTimeout = setTimeout(() => {
-        stopRinging();
+        // استخدام Fade out سلس بدلاً من التوقف المفاجئ
+        if (oscillator && gainNode) {
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1); // يخف الصوت خلال ثانية
+            oscillator.stop(audioContext.currentTime + 1); // يتوقف بعد أن يختفي الصوت
+            oscillator = null;
+            console.log("🔔 الرنين توقف تلقائياً بعد 15 ثانية.");
+        }
     }, 15000); 
     
     console.log("🔔 بدأ الرنين لمدة 15 ثانية.");
@@ -217,10 +244,24 @@ function startRinging() {
 
 function stopRinging() {
     if (oscillator) {
-        oscillator.stop();
-        oscillator.disconnect();
-        oscillator = null;
-        console.log("🔔 تم إيقاف الرنين.");
+        try {
+            // إيقاف الرنين الحالي بسلاسة لتجنب النقر الصوتي
+            const gainNode = oscillator.context.destination.context.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(oscillator.context.destination);
+
+            gainNode.gain.cancelScheduledValues(oscillator.context.currentTime);
+            gainNode.gain.setValueAtTime(gainNode.gain.value, oscillator.context.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, oscillator.context.currentTime + 0.1);
+
+            oscillator.stop(oscillator.context.currentTime + 0.1);
+        } catch(e) {
+            // في حال فشل الإيقاف السلس، نوقف فوراً
+            oscillator.stop();
+        } finally {
+            oscillator = null;
+            console.log("🔔 تم إيقاف الرنين يدوياً.");
+        }
     }
     if (ringingTimeout) {
         clearTimeout(ringingTimeout);
@@ -405,7 +446,7 @@ db.ref("rides").on("value",snap=>{
     });
 
     if(!rideFound){
-        // ⭐⭐ إيقاف الرنين عند عدم وجود طلب نشط ⭐⭐
+        // إيقاف الرنين عند عدم وجود طلب نشط 
         stopRinging(); 
 
         removeAllRideMarkers();
@@ -469,14 +510,14 @@ function showRideRequest(id,r){
 
     // عند قبول الرحلة
     acceptBtn.onclick=function(){
-        // ⭐⭐ إيقاف الرنين عند القبول ⭐⭐
+        // إيقاف الرنين عند القبول 
         stopRinging(); 
         db.ref("rides/"+id).update({status:"مقبولة",driverPhone:driverPhone});
     };
 
     // عند رفض الرحلة
     rejectBtn.onclick=function(){
-        // ⭐⭐ إيقاف الرنين عند الرفض ⭐⭐
+        // إيقاف الرنين عند الرفض 
         stopRinging();
         db.ref("rides/"+id).update({status:"مرفوضة"});
         statusText.innerText="تم رفض الرحلة.";
