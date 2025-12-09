@@ -104,8 +104,8 @@ let startCoords=null,endCoords=null;
 let startMarker=null,endMarker=null;
 let rideId=null;
 
-let startAreaName="الموقع الحالي";
-let endAreaName="الوجهة";
+let startAreaName="الموقع الحالي"; // لتخزين العنوان الكامل
+let endAreaName="الوجهة"; // لتخزين العنوان الكامل
 
 let driverMarker=null;
 let driverRoute=null;
@@ -124,6 +124,28 @@ const SEARCH_DELAY=500;
 let searchInputTimer=null;
 
 // ---------------- وظائف المراقبة والتنظيف والمسار ----------------
+
+// الدالة: استخلاص الاسم الأقصر للمنطقة (للعرض فقط)
+function getShortAreaName(fullArea) {
+    if (!fullArea) return "منطقة غير معروفة";
+    const parts = fullArea.split(',').map(p => p.trim()).filter(p => p.length > 0);
+    
+    // محاولة جلب الجزء الذي لا يحتوي على كلمات إدارية
+    const relevantParts = parts.filter(p => 
+        !p.includes("قضاء") && 
+        !p.includes("ناحية") && 
+        !p.includes("مركز") &&
+        !p.includes("بغداد") 
+    );
+
+    if (relevantParts.length > 0) {
+        // نأخذ الجزء الأكثر دقة (عادة الأقرب للبداية في سلسلة العناوين)
+        return relevantParts[0]; 
+    }
+    
+    // إذا لم تنجح الفلترة، نأخذ الجزء الأخير (الأكثر احتمالاً أن يكون اسم الحي)
+    return parts[parts.length - 1]; 
+}
 
 function clearRideMarkers(){
     // يتم إزالة مؤشر السائق والمسار المرسوم
@@ -256,7 +278,9 @@ function startMonitoringRide(id){
             // إضافة رقم هاتف السائق كرابط اتصال عند القبول
             let driverPhoneHtml = `<a href="tel:${r.driverPhone}" class="phone-link">📞 اتصل بالسائق: ${r.driverPhone}</a>`;
             
-            document.getElementById("status").innerHTML=`🚖 تم قبول الرحلة! السائق قادم إليك...<br>` + statusHtml + driverPhoneHtml;
+            // استخدام الاسم المختصر في الرسالة
+            const shortStartArea = getShortAreaName(r.startArea);
+            document.getElementById("status").innerHTML=`🚖 تم قبول الرحلة! السائق قادم إليك (${shortStartArea}).<br>` + statusHtml + driverPhoneHtml;
             driverInfoDiv.style.display='block';
             
             // البدء بتتبع موقع السائق
@@ -271,7 +295,8 @@ function startMonitoringRide(id){
             
         } else if (r.status === "بدأت") {
              // إخفاء رابط الاتصال، تحديث الرسالة
-             document.getElementById("status").innerHTML=`🚦 الرحلة بدأت! في طريقك إلى **${r.endArea}**<br>` + statusHtml;
+             const shortEndArea = getShortAreaName(r.endArea);
+             document.getElementById("status").innerHTML=`🚦 الرحلة بدأت! في طريقك إلى **${shortEndArea}**<br>` + statusHtml;
              driverInfoDiv.style.display='block';
 
              // تحديث مسار السائق إلى نقطة النهاية
@@ -297,6 +322,7 @@ async function reverseGeocode(lat,lon){
   const url=`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ar`;
   try{
     const r=await fetch(url);const d=await r.json();
+    // نرجع العنوان المفصل (المقصوص) ونستخدم getShortAreaName للعرض فقط
     if(d&&d.display_name) return d.display_name.split(',').slice(0,3).reverse().join(', ');
     return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
   }catch{return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;}
@@ -310,7 +336,8 @@ navigator.geolocation.getCurrentPosition(async pos=>{
   map.setView(startCoords,15);
 
   startAreaName=await reverseGeocode(startCoords[0],startCoords[1]);
-  document.getElementById("status").innerHTML=`📍 موقعك: <b>${startAreaName}</b><br>حدد نقطة النهاية.`;
+  const shortStartArea = getShortAreaName(startAreaName); // استخدام الاسم المختصر للعرض
+  document.getElementById("status").innerHTML=`📍 موقعك: <b>${shortStartArea}</b><br>حدد نقطة النهاية.`;
 
   // التحقق من وجود رحلة نشطة وبدء المراقبة بعد تحديد الموقع
   rideId = localStorage.getItem('activeRideId');
@@ -333,7 +360,8 @@ map.on('click',async function(e){
   endMarker=L.marker(endCoords).addTo(map).bindPopup("🏁 نهاية").openPopup();
 
   endAreaName=await reverseGeocode(endCoords[0],endCoords[1]);
-  document.getElementById("status").innerHTML=`تم تحديد النهاية: <b>${endAreaName}</b>`;
+  const shortEndArea = getShortAreaName(endAreaName); // استخدام الاسم المختصر للعرض
+  document.getElementById("status").innerHTML=`تم تحديد النهاية: <b>${shortEndArea}</b>`;
   sendBtn.disabled=false;
 });
 
@@ -346,9 +374,11 @@ function searchLocation(q){
     if(data.length>0){
       data.forEach(item=>{
         let li=document.createElement('li');
-        let area=item.display_name.split(',').slice(0,3).reverse().join(', ');
-        li.innerText=area;
-        li.onclick=()=>selectSearchResult(item.lat,item.lon,area);
+        let fullArea=item.display_name.split(',').slice(0,3).reverse().join(', '); // العنوان الكامل
+        let shortArea=getShortAreaName(fullArea); // العنوان المختصر للعرض
+        
+        li.innerText=shortArea; // عرض العنوان المختصر
+        li.onclick=()=>selectSearchResult(item.lat,item.lon,fullArea); // تمرير العنوان الكامل للدالة
         searchResultsUl.appendChild(li);
       });
       searchResultsUl.style.display='block';
@@ -361,15 +391,18 @@ function searchLocation(q){
 
 function selectSearchResult(lat,lng,name){
   searchResultsUl.innerHTML='';searchResultsUl.style.display='none';
-  searchInput.value=name;endAreaName=name;
+  
+  const shortName = getShortAreaName(name); // استخدام الاسم المختصر للعرض
+  searchInput.value=shortName;
+  endAreaName=name; // تخزين الاسم الكامل لاستخدامه في Firebase
 
   let latlng=L.latLng(parseFloat(lat),parseFloat(lng));
   if(endMarker) map.removeLayer(endMarker);
   endCoords=[latlng.lat,latlng.lng];
-  endMarker=L.marker(endCoords).addTo(map).bindPopup(`🏁 ${name}`).openPopup();
+  endMarker=L.marker(endCoords).addTo(map).bindPopup(`🏁 ${shortName}`).openPopup();
   map.setView(endCoords,15);
 
-  if(!rideId){document.getElementById("status").innerHTML=`تم تحديد النهاية: <b>${name}</b>`;sendBtn.disabled=false;}
+  if(!rideId){document.getElementById("status").innerHTML=`تم تحديد النهاية: <b>${shortName}</b>`;sendBtn.disabled=false;}
 }
 
 searchInput.addEventListener('input',e=>{
@@ -408,12 +441,16 @@ sendBtn.onclick=function(){
     riderPhone:phone,
     startLat:startCoords[0], startLng:startCoords[1], // تخزين الإحداثيات منفصلة
     endLat:endCoords[0], endLng:endCoords[1],         // تخزين الإحداثيات منفصلة
-    startArea:startAreaName,endArea:endAreaName,
+    startArea:startAreaName,endArea:endAreaName, // استخدام الأسماء الكاملة المخزنة سابقاً
     distance:distance,fare:fare,status:"جديدة"
   });
 
+  const shortStartArea = getShortAreaName(startAreaName);
+  const shortEndArea = getShortAreaName(endAreaName);
+
   document.getElementById("status").innerHTML=
-    `تم الإرسال<br>المسافة: ${distance} كم — الأجرة: ${fare.toLocaleString('ar-IQ')} د.ع`;
+    `تم الإرسال<br>من **${shortStartArea}** إلى **${shortEndArea}**<br>
+     المسافة: ${distance} كم — الأجرة: ${fare.toLocaleString('ar-IQ')} د.ع`;
   
   startMonitoringRide(rideId);
 };
