@@ -13,7 +13,7 @@
 
 <style>
 body,html{margin:0;padding:0;height:100%;font-family:Tahoma;}
-#map{height:60vh;}
+#map{height:80vh; /* تم زيادة ارتفاع الخريطة */}
 #panel{
     background:#fff;padding:10px;text-align:center;
     box-shadow:0 -2px 5px rgba(0,0,0,0.2);
@@ -29,16 +29,51 @@ button{
 #wazeBtn{
     background:#1E90FF;color:white;
 }
-/* تنسيق لعرض رقم الهاتف بشكل أفضل */
+
+/* تنسيقات الأزرار العائمة الجديدة */
+#floatingControls{
+    position: absolute;
+    bottom: 10px; /* عائمة فوق لوحة التحكم السفلية */
+    left: 10px;
+    z-index: 1000;
+    direction: ltr; /* لتثبيت الأزرار على اليسار */
+}
+#floatingControls button,
+#floatingControls .ride-action-info {
+    display: block;
+    margin-top: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    border-radius: 8px;
+    width: 150px;
+    font-size: 14px;
+    padding: 10px;
+}
+.ride-action-info {
+    background: #fff;
+    padding: 5px;
+    color: #333;
+    font-size: 0.9em;
+    direction: rtl; /* لإعادة اللغة العربية داخل الحاوية */
+    text-align: center;
+}
 .phone-link {
     color: #007bff;
     text-decoration: none;
     font-weight: bold;
     display: block;
-    margin-top: 5px;
+    margin: 0;
+    font-size: 1em;
 }
 .phone-link:hover {
     text-decoration: underline;
+}
+#startRideBtn {
+    background: #ff9800;
+    color: white;
+}
+#finishBtn {
+    background: #1e88e5;
+    color: white;
 }
 </style>
 </head>
@@ -46,20 +81,23 @@ button{
 
 <div id="map"></div>
 
+<div id="floatingControls" style="display:none;">
+    <div id="riderContactInfo" class="ride-action-info" style="display:none;"></div>
+
+    <button id="wazeBtn" onclick="openWaze()"></button>
+    
+    <button id="startRideBtn" style="display:none;">بدء الرحلة 🚦</button> 
+    <button id="finishBtn" style="display:none;">إنهاء الرحلة</button>
+</div>
+
+
 <div id="panel">
     <h3>🚖 وضع السائق</h3>
     <p id="status">في انتظار الطلبات...</p>
     
-    <button id="wazeBtn" style="display:none;" onclick="openWaze()">ويز حدث 🗺️</button>
-    <br>
-
     <button id="acceptBtn" style="display:none;background:#4caf50;color:white;">قبول الرحلة</button>
     <button id="rejectBtn" style="display:none;background:#e53935;color:white;">رفض الرحلة</button>
     
-    <button id="startRideBtn" style="display:none;background:#ff9800;color:white;">بدء الرحلة 🚦</button> 
-
-    <button id="finishBtn" style="display:none;background:#1e88e5;color:white;">إنهاء الرحلة</button>
-
     <button id="logoutBtn" onclick="logout()">تسجيل الخروج</button>
 </div>
 
@@ -151,6 +189,7 @@ function removeAllRideMarkers(){
 // عرض مسار (polyline) بسيط بين نقطتين (للتوضيح، يجب استخدام خدمة مسارات حقيقية)
 function drawRoute(coords, color, dashArray=''){
     let route=L.polyline(coords,{color:color,dashArray:dashArray,weight:5}).addTo(map);
+    // ملاحظة: هذا مسار مستقيم. يتطلب رسم مسار حقيقي على الشوارع استخدام API خارجي (مثل Google Directions أو OSRM).
     return route;
 }
 
@@ -187,7 +226,9 @@ const rejectBtn=document.getElementById("rejectBtn");
 const startRideBtn=document.getElementById("startRideBtn");
 const finishBtn=document.getElementById("finishBtn");
 const wazeBtn=document.getElementById("wazeBtn");
-const logoutBtn=document.getElementById("logoutBtn"); // الحصول على زر تسجيل الخروج
+const logoutBtn=document.getElementById("logoutBtn"); 
+const floatingControls=document.getElementById("floatingControls"); // عنصر التحكم العائم
+const riderContactInfo=document.getElementById("riderContactInfo"); // معلومات الاتصال
 
 db.ref("rides").on("value",snap=>{
     let data=snap.val();
@@ -220,9 +261,13 @@ db.ref("rides").on("value",snap=>{
         currentRideData=null;
         acceptBtn.style.display="none";
         rejectBtn.style.display="none";
+        // إخفاء الأزرار العائمة ومحتوياتها
         startRideBtn.style.display="none";
         finishBtn.style.display="none";
         wazeBtn.style.display="none";
+        riderContactInfo.style.display="none";
+        floatingControls.style.display="none";
+        
         logoutBtn.style.display="inline-block"; // إظهار زر تسجيل الخروج
         statusText.innerText="في انتظار الطلبات...";
     }
@@ -232,10 +277,12 @@ function showRideRequest(id,r){
     currentRideId=id;
     currentRideData=r;
     
-    // إخفاء الأزرار المتبقية
+    // إخفاء الأزرار المتبقية والعائمة
     startRideBtn.style.display="none";
     finishBtn.style.display="none";
     wazeBtn.style.display="none";
+    riderContactInfo.style.display="none";
+    floatingControls.style.display="none";
     logoutBtn.style.display="inline-block"; // إظهار تسجيل الخروج
     removeAllRideMarkers();
 
@@ -249,7 +296,7 @@ function showRideRequest(id,r){
       `🚖 طلب جديد<br>
        من: **${r.startArea}** إلى: **${r.endArea}**<br>
        **مسافة الرحلة:** ${r.distance} كم<br>
-       **الأجرة المتوقعة:** ${formattedFare} د.ع`; // تم تحديث طريقة العرض لدمج المنطقتين وإبراز مسافة الرحلة
+       **الأجرة المتوقعة:** ${formattedFare} د.ع`;
 
     acceptBtn.style.display="inline-block";
     rejectBtn.style.display="inline-block";
@@ -272,13 +319,25 @@ function handleAcceptedRide(id,r){
     currentRideId=id;
     currentRideData=r;
     
-    // إظهار زر ويز وزر البدء
+    // إخفاء أزرار لوحة التحكم الأساسية
     acceptBtn.style.display="none";
     rejectBtn.style.display="none";
+    logoutBtn.style.display="none"; 
+    
+    // إظهار الأزرار العائمة
+    floatingControls.style.display="block";
+    riderContactInfo.style.display = "block";
     startRideBtn.style.display="inline-block"; // إظهار زر البدء
     finishBtn.style.display="none"; // إخفاء زر الإنهاء
     wazeBtn.style.display="inline-block"; // إظهار زر ويز
-    logoutBtn.style.display="none"; // إخفاء زر تسجيل الخروج
+    wazeBtn.innerText = "ويز: اذهب للراكب 🚗"; // تحديث نص زر ويز
+
+    // عرض معلومات الاتصال بالراكب
+    riderContactInfo.innerHTML = `
+        <a href="tel:${r.riderPhone}" class="phone-link">
+            📞 اتصل بالراكب: ${r.riderPhone}
+        </a>
+    `;
 
     removeAllRideMarkers();
     
@@ -303,7 +362,7 @@ function handleAcceptedRide(id,r){
         db.ref("rides/"+id).update({status:"بدأت"});
     };
     
-    // عند الضغط على إنهاء الرحلة
+    // عند الضغط على إنهاء الرحلة (لمنع الإنهاء العرضي)
     finishBtn.onclick=function(){
         db.ref("rides/"+id).update({status:"منتهية"});
     };
@@ -314,30 +373,37 @@ function handleStartedRide(id,r){
     currentRideId=id;
     currentRideData=r;
     
+    // إخفاء أزرار لوحة التحكم الأساسية
     acceptBtn.style.display="none";
     rejectBtn.style.display="none";
+    logoutBtn.style.display="none";
+    
+    // إظهار الأزرار العائمة
+    floatingControls.style.display="block";
+    riderContactInfo.style.display = "block";
     startRideBtn.style.display="none";
     finishBtn.style.display="inline-block"; // إظهار زر الإنهاء
     wazeBtn.style.display="inline-block"; // إظهار زر ويز
-    logoutBtn.style.display="none"; // إخفاء زر تسجيل الخروج
+    wazeBtn.innerText = "ويز: اذهب للوصول 🏁"; // تحديث نص زر ويز
 
     removeAllRideMarkers(); // مسح أي مسارات سابقة (مثل مسار القبول)
 
-    // **تنفيذ طلبك: إظهار رقم الراكب تشعبي**
-    statusText.innerHTML=`
-        الرحلة بدأت!
+    // عرض معلومات الاتصال بالراكب
+    riderContactInfo.innerHTML = `
         <a href="tel:${r.riderPhone}" class="phone-link">
             📞 اتصل بالراكب: ${r.riderPhone}
         </a>
-        الوجهة: **${r.endArea}**
     `;
     
-    // **تنفيذ طلبك: مسار نقطة النهاية (من نقطة البداية إلى نقطة الوصول)**
+    // تحديث رسالة الحالة
+    statusText.innerHTML=`الرحلة بدأت! الوجهة: **${r.endArea}**`;
+    
+    // مسار نقطة النهاية (من نقطة البداية إلى نقطة الوصول)
     if(r.startLat && r.startLng && r.endLat && r.endLng){
         let startCoords=[r.startLat, r.startLng];
         let endCoords=[r.endLat, r.endLng];
         
-        // رسم مسار من نقطة البداية إلى نقطة النهاية - خط صلب
+        // رسم مسار من نقطة البداية إلى نقطة النهاية - خط صلب (ليس مسار شوارع حقيقي)
         destinationRoute=drawRoute([startCoords, endCoords], '#1e88e5');
 
         // تحديث مؤشر الراكب ليكون في نقطة البداية
