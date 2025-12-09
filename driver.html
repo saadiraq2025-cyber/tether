@@ -13,7 +13,8 @@
 
 <style>
 body,html{margin:0;padding:0;height:100%;font-family:Tahoma;}
-#map{height:80vh;}
+/* تمت إضافة انتقال سلس لتغير ارتفاع الخريطة */
+#map{height:80vh; transition: height 0.3s ease-in-out;} 
 #panel{
     background:#fff;padding:10px;text-align:center;
     box-shadow:0 -2px 5px rgba(0,0,0,0.2);
@@ -166,11 +167,10 @@ setInterval(()=>{
             lat:lat,lng:lng,status:"متصل"
         });
         
-        // ⭐⭐ التحديث: التركيز على السائق عند عدم وجود رحلة نشطة ⭐⭐
+        // التركيز على السائق عند عدم وجود رحلة نشطة
         if (!currentRideId) {
             map.setView([lat, lng], map.getZoom() > 13 ? map.getZoom() : 13);
         }
-        // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
 
     },err=>{},{
         enableHighAccuracy:true,timeout:5000
@@ -241,6 +241,11 @@ const logoutBtn=document.getElementById("logoutBtn");
 const floatingControls=document.getElementById("floatingControls"); // عنصر التحكم العائم
 const riderContactInfo=document.getElementById("riderContactInfo"); // معلومات الاتصال
 
+// ⭐⭐ العناصر الجديدة للتحكم بالشاشة الكاملة ⭐⭐
+const mapElement = document.getElementById("map"); 
+const panelElement = document.getElementById("panel");
+// ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
 db.ref("rides").on("value",snap=>{
     let data=snap.val();
     if(!data) return;
@@ -282,7 +287,10 @@ db.ref("rides").on("value",snap=>{
         logoutBtn.style.display="inline-block"; // إظهار زر تسجيل الخروج
         statusText.innerText="في انتظار الطلبات...";
         
-        // ملاحظة: تم نقل تحديث مركز الخريطة إلى setInterval
+        // ⭐⭐ إظهار لوحة التحكم وإعادة حجم الخريطة ⭐⭐
+        panelElement.style.display="block"; 
+        mapElement.style.height="80vh";
+        // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
     }
 });
 
@@ -298,6 +306,10 @@ function showRideRequest(id,r){
     floatingControls.style.display="none";
     logoutBtn.style.display="inline-block"; // إظهار تسجيل الخروج
     removeAllRideMarkers();
+
+    // التأكد من وضع الخريطة ولوحة التحكم في وضع الطلب الجديد
+    panelElement.style.display="block"; 
+    mapElement.style.height="80vh";
 
     // حساب وعرض الأجرة
     const distance = parseFloat(r.distance) || 0;
@@ -337,6 +349,11 @@ function handleAcceptedRide(id,r){
     rejectBtn.style.display="none";
     logoutBtn.style.display="none"; 
     
+    // ⭐⭐ إخفاء لوحة التحكم وتكبير الخريطة ⭐⭐
+    panelElement.style.display="none"; 
+    mapElement.style.height="100vh";
+    // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
     // إظهار الأزرار العائمة
     floatingControls.style.display="flex";
     riderContactInfo.style.display = "block";
@@ -390,6 +407,11 @@ function handleStartedRide(id,r){
     acceptBtn.style.display="none";
     rejectBtn.style.display="none";
     logoutBtn.style.display="none";
+    
+    // ⭐⭐ إخفاء لوحة التحكم وتكبير الخريطة ⭐⭐
+    panelElement.style.display="none"; 
+    mapElement.style.height="100vh";
+    // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
     
     // إظهار الأزرار العائمة
     floatingControls.style.display="flex";
