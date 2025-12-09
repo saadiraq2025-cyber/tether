@@ -197,12 +197,38 @@ function removeAllRideMarkers(){
     });
 }
 
-// عرض مسار (polyline) بسيط بين نقطتين (للتوضيح، يجب استخدام خدمة مسارات حقيقية)
-function drawRoute(coords, color, dashArray=''){
-    let route=L.polyline(coords,{color:color,dashArray:dashArray,weight:5}).addTo(map);
-    // ملاحظة: هذا مسار مستقيم. يتطلب رسم مسار حقيقي على الشوارع استخدام API خارجي (مثل Google Directions أو OSRM).
-    return route;
+// ⭐⭐ الدالة الجديدة: جلب ورسم مسار حقيقي على الشوارع باستخدام OSRM ⭐⭐
+async function drawStreetRoute(lat1, lng1, lat2, lng2, color, dashArray = '') {
+    // خدمة OSRM تتطلب الإحداثيات بصيغة: lng,lat
+    const OSRM_URL = `https://router.project-osrm.org/route/v1/driving/${lng1},${lat1};${lng2},${lat2}?geometries=geojson&overview=full`;
+    
+    try {
+        const response = await fetch(OSRM_URL);
+        const data = await response.json();
+
+        if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+            console.error('OSRM route calculation failed or no route found. Falling back to straight line.');
+            // العودة إلى الرسم البسيط في حال الفشل
+            return L.polyline([[lat1, lng1], [lat2, lng2]], { color: color, dashArray: dashArray, weight: 5 }).addTo(map);
+        }
+
+        // استخراج إحداثيات المسار من الاستجابة (بصيغة GeoJSON: [lng, lat])
+        const geojsonCoords = data.routes[0].geometry.coordinates;
+
+        // تحويل الإحداثيات إلى صيغة Leaflet ([lat, lng])
+        const leafletCoords = geojsonCoords.map(coord => [coord[1], coord[0]]);
+
+        let route = L.polyline(leafletCoords, { color: color, dashArray: dashArray, weight: 5 }).addTo(map);
+        return route;
+
+    } catch (error) {
+        console.error('Error fetching route from OSRM. Falling back to straight line.', error);
+        // العودة إلى الرسم البسيط في حال الفشل
+        return L.polyline([[lat1, lng1], [lat2, lng2]], { color: color, dashArray: dashArray, weight: 5 }).addTo(map);
+    }
 }
+// ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
 
 // دالة Waze الموحدة التي تحدد الوجهة بناءً على حالة الرحلة
 function openWaze(){
@@ -241,10 +267,8 @@ const logoutBtn=document.getElementById("logoutBtn");
 const floatingControls=document.getElementById("floatingControls"); // عنصر التحكم العائم
 const riderContactInfo=document.getElementById("riderContactInfo"); // معلومات الاتصال
 
-// ⭐⭐ العناصر الجديدة للتحكم بالشاشة الكاملة ⭐⭐
 const mapElement = document.getElementById("map"); 
 const panelElement = document.getElementById("panel");
-// ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
 
 db.ref("rides").on("value",snap=>{
     let data=snap.val();
@@ -287,10 +311,9 @@ db.ref("rides").on("value",snap=>{
         logoutBtn.style.display="inline-block"; // إظهار زر تسجيل الخروج
         statusText.innerText="في انتظار الطلبات...";
         
-        // ⭐⭐ إظهار لوحة التحكم وإعادة حجم الخريطة ⭐⭐
+        // إظهار لوحة التحكم وإعادة حجم الخريطة 
         panelElement.style.display="block"; 
         mapElement.style.height="80vh";
-        // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
     }
 });
 
@@ -340,7 +363,8 @@ function showRideRequest(id,r){
     };
 }
 
-function handleAcceptedRide(id,r){
+// ⭐⭐ جعل الدالة غير متزامنة (async) لاستخدام fetch ⭐⭐
+async function handleAcceptedRide(id,r){
     currentRideId=id;
     currentRideData=r;
     
@@ -349,11 +373,10 @@ function handleAcceptedRide(id,r){
     rejectBtn.style.display="none";
     logoutBtn.style.display="none"; 
     
-    // ⭐⭐ إخفاء لوحة التحكم وتكبير الخريطة ⭐⭐
+    // إخفاء لوحة التحكم وتكبير الخريطة 
     panelElement.style.display="none"; 
     mapElement.style.height="100vh";
-    // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
-
+    
     // إظهار الأزرار العائمة
     floatingControls.style.display="flex";
     riderContactInfo.style.display = "block";
@@ -373,15 +396,16 @@ function handleAcceptedRide(id,r){
     
     // إضافة مسار الراكب
     if(r.startLat && r.startLng && driverMarker){
-        let driverCoords=[driverMarker.getLatLng().lat, driverMarker.getLatLng().lng];
-        let passengerCoords=[r.startLat, r.startLng];
-        
-        // رسم مسار من موقع السائق إلى الراكب (نقطة البداية) - خط متقطع
-        pickupRoute=drawRoute([driverCoords, passengerCoords], '#4caf50', '10, 10'); 
+        let driverLat=driverMarker.getLatLng().lat;
+        let driverLng=driverMarker.getLatLng().lng;
+
+        // ⭐⭐ استخدام الدالة الجديدة لرسم مسار الشوارع ⭐⭐
+        pickupRoute = await drawStreetRoute(driverLat, driverLng, r.startLat, r.startLng, '#4caf50', '10, 10'); 
+        // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
 
         // وضع مؤشر الراكب
-        passengerMarker=L.marker(passengerCoords).addTo(map).bindPopup("👤 موقع الراكب");
-        map.setView(passengerCoords, 14); // التركيز على الراكب
+        passengerMarker=L.marker([r.startLat, r.startLng]).addTo(map).bindPopup("👤 موقع الراكب");
+        map.setView([r.startLat, r.startLng], 14); // التركيز على الراكب
     }
 
     statusText.innerHTML=`تم قبول الرحلة. في طريقك للراكب **(${r.startArea})**...`;
@@ -398,8 +422,8 @@ function handleAcceptedRide(id,r){
     };
 }
 
-// === دالة جديدة للتعامل مع حالة "بدأت" ===
-function handleStartedRide(id,r){
+// ⭐⭐ جعل الدالة غير متزامنة (async) لاستخدام fetch ⭐⭐
+async function handleStartedRide(id,r){
     currentRideId=id;
     currentRideData=r;
     
@@ -408,10 +432,9 @@ function handleStartedRide(id,r){
     rejectBtn.style.display="none";
     logoutBtn.style.display="none";
     
-    // ⭐⭐ إخفاء لوحة التحكم وتكبير الخريطة ⭐⭐
+    // إخفاء لوحة التحكم وتكبير الخريطة 
     panelElement.style.display="none"; 
     mapElement.style.height="100vh";
-    // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
     
     // إظهار الأزرار العائمة
     floatingControls.style.display="flex";
@@ -435,18 +458,21 @@ function handleStartedRide(id,r){
     
     // مسار نقطة النهاية (من نقطة البداية إلى نقطة الوصول)
     if(r.startLat && r.startLng && r.endLat && r.endLng){
-        let startCoords=[r.startLat, r.startLng];
-        let endCoords=[r.endLat, r.endLng];
+        let startLat=r.startLat;
+        let startLng=r.startLng;
+        let endLat=r.endLat;
+        let endLng=r.endLng;
         
-        // رسم مسار من نقطة البداية إلى نقطة النهاية - خط صلب (ليس مسار شوارع حقيقي)
-        destinationRoute=drawRoute([startCoords, endCoords], '#1e88e5');
+        // ⭐⭐ استخدام الدالة الجديدة لرسم مسار الشوارع ⭐⭐
+        destinationRoute = await drawStreetRoute(startLat, startLng, endLat, endLng, '#1e88e5');
+        // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
 
         // تحديث مؤشر الراكب ليكون في نقطة البداية
-        passengerMarker=L.marker(startCoords).addTo(map).bindPopup("🟢 نقطة البداية").openPopup();
+        passengerMarker=L.marker([startLat, startLng]).addTo(map).bindPopup("🟢 نقطة البداية").openPopup();
         
         // إضافة مؤشر لنقطة النهاية
-        L.marker(endCoords).addTo(map).bindPopup("🏁 نقطة النهاية");
-        map.fitBounds([startCoords, endCoords]); // التركيز على المسار الجديد
+        L.marker([endLat, endLng]).addTo(map).bindPopup("🏁 نقطة النهاية");
+        map.fitBounds([[startLat, startLng], [endLat, endLng]]); // التركيز على المسار الجديد
     }
 
     // عند الضغط على إنهاء الرحلة
