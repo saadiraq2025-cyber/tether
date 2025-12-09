@@ -247,10 +247,9 @@ function showRideRequest(id,r){
 
     statusText.innerHTML=
       `🚖 طلب جديد<br>
-       من: <b>${r.startArea}</b><br>
-       إلى: <b>${r.endArea}</b><br>
-       المسافة: **${r.distance} كم**<br>
-       **الأجرة المتوقعة: ${formattedFare} د.ع**`; // عرض الأجرة والمسافة والمنطقة
+       من: **${r.startArea}** إلى: **${r.endArea}**<br>
+       **مسافة الرحلة:** ${r.distance} كم<br>
+       **الأجرة المتوقعة:** ${formattedFare} د.ع`; // تم تحديث طريقة العرض لدمج المنطقتين وإبراز مسافة الرحلة
 
     acceptBtn.style.display="inline-block";
     rejectBtn.style.display="inline-block";
