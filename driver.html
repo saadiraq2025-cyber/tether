@@ -12,26 +12,52 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 
 <style>
-body,html{margin:0;padding:0;height:100%;font-family:Tahoma;}
-/* تمت إضافة انتقال سلس لتغير ارتفاع الخريطة */
-#map{height:80vh; transition: height 0.3s ease-in-out;} 
-#panel{
-    background:#fff;padding:10px;text-align:center;
-    box-shadow:0 -2px 5px rgba(0,0,0,0.2);
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: Tahoma;
+    overflow: hidden; /* ⭐⭐ إزالة شريط التمرير ⭐⭐ */
+    display: flex;
+    flex-direction: column;
 }
-button{
-    background:#ffb300;border:none;padding:10px 20px;
-    border-radius:8px;margin:5px;font-weight:bold;
-    cursor:pointer;
+
+#panel {
+    background: #fff;
+    padding: 10px;
+    text-align: center;
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
+    /* ⭐⭐ ضمان بقاء اللوحة في الأسفل ⭐⭐ */
+    flex-shrink: 0; 
 }
-#logoutBtn{
-    background:#455a64;color:white;margin-top:10px;width:95%;
+
+/* ⭐⭐ تعديل ارتفاع الخريطة ليكون ديناميكياً ⭐⭐ */
+#map {
+    height: calc(100vh - 120px); /* قيمة افتراضية سيتم تعديلها بواسطة JS */
+    transition: height 0.3s ease-in-out;
+    flex-grow: 1; /* لتأخذ المساحة المتبقية */
+}
+
+button {
+    background: #ffb300;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    margin: 5px;
+    font-weight: bold;
+    cursor: pointer;
+}
+#logoutBtn {
+    background: #455a64;
+    color: white;
+    margin-top: 10px;
+    width: 95%;
 }
 
 /* تنسيقات الأزرار العائمة الجديدة */
-#floatingControls{
+#floatingControls {
     position: absolute;
-    bottom: 10px; 
+    bottom: 10px;
     left: 10px;
     z-index: 1000;
     direction: ltr;
@@ -43,7 +69,7 @@ button{
 #floatingControls button,
 #floatingControls .ride-action-info {
     display: block;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
     border-radius: 8px;
     width: 150px;
     font-size: 14px;
@@ -55,7 +81,7 @@ button{
     padding: 5px;
     color: #333;
     font-size: 0.9em;
-    direction: rtl; 
+    direction: rtl;
     text-align: center;
 }
 .phone-link {
@@ -115,6 +141,9 @@ window.onload=function(){
     if(!phone||type!=="driver"){
         window.location.href="index.html";
     }
+    // ⭐⭐ حساب ارتفاع الخريطة عند التحميل ⭐⭐
+    updateMapHeight();
+    window.addEventListener('resize', updateMapHeight);
 };
 
 function logout(){
@@ -153,6 +182,20 @@ let pickupRoute=null; // مسار نقطة البداية (من السائق ل�
 let destinationRoute=null; // مسار نقطة النهاية (من الراكب لنقطة النهاية)
 let currentRideData=null;
 // ===========================================
+
+// ⭐⭐ دالة لحساب ارتفاع لوحة التحكم وتعيين ارتفاع الخريطة ⭐⭐
+function updateMapHeight() {
+    const panelHeight = panelElement.offsetHeight;
+    if (panelElement.style.display !== "none") {
+        // إذا كانت اللوحة مرئية، اجعل ارتفاع الخريطة يساوي ارتفاع الشاشة الكلي ناقص ارتفاع اللوحة
+        mapElement.style.height = `calc(100vh - ${panelHeight}px)`;
+    } else {
+        // إذا كانت اللوحة مخفية، اجعل الخريطة بكامل ارتفاع الشاشة
+        mapElement.style.height = '100vh';
+    }
+    map.invalidateSize();
+}
+// ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
 
 // تحديث موقع السائق كل 5 ثوانٍ
 setInterval(()=>{
@@ -197,7 +240,7 @@ function removeAllRideMarkers(){
     });
 }
 
-// ⭐⭐ الدالة الجديدة: جلب ورسم مسار حقيقي على الشوارع باستخدام OSRM ⭐⭐
+// الدالة: جلب ورسم مسار حقيقي على الشوارع باستخدام OSRM
 async function drawStreetRoute(lat1, lng1, lat2, lng2, color, dashArray = '') {
     // خدمة OSRM تتطلب الإحداثيات بصيغة: lng,lat
     const OSRM_URL = `https://router.project-osrm.org/route/v1/driving/${lng1},${lat1};${lng2},${lat2}?geometries=geojson&overview=full`;
@@ -227,7 +270,6 @@ async function drawStreetRoute(lat1, lng1, lat2, lng2, color, dashArray = '') {
         return L.polyline([[lat1, lng1], [lat2, lng2]], { color: color, dashArray: dashArray, weight: 5 }).addTo(map);
     }
 }
-// ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
 
 
 // دالة Waze الموحدة التي تحدد الوجهة بناءً على حالة الرحلة
@@ -311,9 +353,9 @@ db.ref("rides").on("value",snap=>{
         logoutBtn.style.display="inline-block"; // إظهار زر تسجيل الخروج
         statusText.innerText="في انتظار الطلبات...";
         
-        // إظهار لوحة التحكم وإعادة حجم الخريطة 
+        // إظهار لوحة التحكم وإعادة حساب حجم الخريطة 
         panelElement.style.display="block"; 
-        mapElement.style.height="80vh";
+        updateMapHeight();
     }
 });
 
@@ -332,7 +374,7 @@ function showRideRequest(id,r){
 
     // التأكد من وضع الخريطة ولوحة التحكم في وضع الطلب الجديد
     panelElement.style.display="block"; 
-    mapElement.style.height="80vh";
+    updateMapHeight();
 
     // حساب وعرض الأجرة
     const distance = parseFloat(r.distance) || 0;
@@ -363,7 +405,7 @@ function showRideRequest(id,r){
     };
 }
 
-// ⭐⭐ جعل الدالة غير متزامنة (async) لاستخدام fetch ⭐⭐
+// جعل الدالة غير متزامنة (async) لاستخدام fetch
 async function handleAcceptedRide(id,r){
     currentRideId=id;
     currentRideData=r;
@@ -375,7 +417,7 @@ async function handleAcceptedRide(id,r){
     
     // إخفاء لوحة التحكم وتكبير الخريطة 
     panelElement.style.display="none"; 
-    mapElement.style.height="100vh";
+    updateMapHeight(); // ⭐⭐ تحديث الارتفاع إلى 100vh ⭐⭐
     
     // إظهار الأزرار العائمة
     floatingControls.style.display="flex";
@@ -399,9 +441,8 @@ async function handleAcceptedRide(id,r){
         let driverLat=driverMarker.getLatLng().lat;
         let driverLng=driverMarker.getLatLng().lng;
 
-        // ⭐⭐ استخدام الدالة الجديدة لرسم مسار الشوارع ⭐⭐
+        // استخدام الدالة الجديدة لرسم مسار الشوارع
         pickupRoute = await drawStreetRoute(driverLat, driverLng, r.startLat, r.startLng, '#4caf50', '10, 10'); 
-        // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
 
         // وضع مؤشر الراكب
         passengerMarker=L.marker([r.startLat, r.startLng]).addTo(map).bindPopup("👤 موقع الراكب");
@@ -422,7 +463,7 @@ async function handleAcceptedRide(id,r){
     };
 }
 
-// ⭐⭐ جعل الدالة غير متزامنة (async) لاستخدام fetch ⭐⭐
+// جعل الدالة غير متزامنة (async) لاستخدام fetch
 async function handleStartedRide(id,r){
     currentRideId=id;
     currentRideData=r;
@@ -434,7 +475,7 @@ async function handleStartedRide(id,r){
     
     // إخفاء لوحة التحكم وتكبير الخريطة 
     panelElement.style.display="none"; 
-    mapElement.style.height="100vh";
+    updateMapHeight(); // ⭐⭐ تحديث الارتفاع إلى 100vh ⭐⭐
     
     // إظهار الأزرار العائمة
     floatingControls.style.display="flex";
@@ -463,9 +504,8 @@ async function handleStartedRide(id,r){
         let endLat=r.endLat;
         let endLng=r.endLng;
         
-        // ⭐⭐ استخدام الدالة الجديدة لرسم مسار الشوارع ⭐⭐
+        // استخدام الدالة الجديدة لرسم مسار الشوارع
         destinationRoute = await drawStreetRoute(startLat, startLng, endLat, endLng, '#1e88e5');
-        // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
 
         // تحديث مؤشر الراكب ليكون في نقطة البداية
         passengerMarker=L.marker([startLat, startLng]).addTo(map).bindPopup("🟢 نقطة البداية").openPopup();
