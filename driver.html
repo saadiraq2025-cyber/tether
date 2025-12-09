@@ -17,7 +17,7 @@ body, html {
     padding: 0;
     height: 100%;
     font-family: Tahoma;
-    overflow: hidden; /* ⭐⭐ إزالة شريط التمرير ⭐⭐ */
+    overflow: hidden; /* إزالة شريط التمرير */
     display: flex;
     flex-direction: column;
 }
@@ -27,11 +27,11 @@ body, html {
     padding: 10px;
     text-align: center;
     box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
-    /* ⭐⭐ ضمان بقاء اللوحة في الأسفل ⭐⭐ */
+    /* ضمان بقاء اللوحة في الأسفل */
     flex-shrink: 0; 
 }
 
-/* ⭐⭐ تعديل ارتفاع الخريطة ليكون ديناميكياً ⭐⭐ */
+/* تعديل ارتفاع الخريطة ليكون ديناميكياً */
 #map {
     height: calc(100vh - 120px); /* قيمة افتراضية سيتم تعديلها بواسطة JS */
     transition: height 0.3s ease-in-out;
@@ -141,7 +141,7 @@ window.onload=function(){
     if(!phone||type!=="driver"){
         window.location.href="index.html";
     }
-    // ⭐⭐ حساب ارتفاع الخريطة عند التحميل ⭐⭐
+    // حساب ارتفاع الخريطة عند التحميل 
     updateMapHeight();
     window.addEventListener('resize', updateMapHeight);
 };
@@ -163,7 +163,7 @@ const db=firebase.database();
 // إنشاء الخريطة
 let map=L.map('map').setView([33.3152,44.3661],13);
 
-// ⭐⭐ خريطة Google Maps ⭐⭐
+// خريطة Google Maps 
 L.tileLayer(
  "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&key=AIzaSyD7TtwniAdUtB8-pnTny4ZwE6gqX36SGUk",
  {maxZoom:20}
@@ -183,7 +183,7 @@ let destinationRoute=null; // مسار نقطة النهاية (من الراك�
 let currentRideData=null;
 // ===========================================
 
-// ⭐⭐ دالة لحساب ارتفاع لوحة التحكم وتعيين ارتفاع الخريطة ⭐⭐
+// دالة لحساب ارتفاع لوحة التحكم وتعيين ارتفاع الخريطة 
 function updateMapHeight() {
     const panelHeight = panelElement.offsetHeight;
     if (panelElement.style.display !== "none") {
@@ -195,7 +195,6 @@ function updateMapHeight() {
     }
     map.invalidateSize();
 }
-// ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
 
 // تحديث موقع السائق كل 5 ثوانٍ
 setInterval(()=>{
@@ -297,6 +296,29 @@ function openWaze(){
     }
 }
 
+// ⭐⭐ الدالة الجديدة: استخلاص الاسم الأقصر للمنطقة ⭐⭐
+function getShortAreaName(fullArea) {
+    if (!fullArea) return "منطقة غير معروفة";
+    const parts = fullArea.split(',').map(p => p.trim()).filter(p => p.length > 0);
+    
+    // محاولة جلب الجزء الأخير أو الجزء الذي لا يحتوي على كلمة "قضاء" أو "ناحية" أو "مركز"
+    const relevantParts = parts.filter(p => 
+        !p.includes("قضاء") && 
+        !p.includes("ناحية") && 
+        !p.includes("مركز") &&
+        !p.includes("بغداد") // استبعاد بغداد إذا كانت الأخيرة
+    );
+
+    if (relevantParts.length > 0) {
+        // نأخذ الجزء الأكثر دقة (عادة الأقرب للبداية في سلسلة العناوين)
+        return relevantParts[0]; 
+    }
+    
+    // إذا لم تنجح الفلترة، نأخذ الجزء الأخير (الأقصر والأكثر احتمالاً أن يكون اسم الحي)
+    return parts[parts.length - 1]; 
+}
+// ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
+
 
 // استقبال الطلبات
 const statusText=document.getElementById("status");
@@ -380,11 +402,15 @@ function showRideRequest(id,r){
     const distance = parseFloat(r.distance) || 0;
     const fare = r.fare || Math.round(distance * 1000); // 1000 دينار لكل كم
     const formattedFare = fare.toLocaleString('ar-IQ') || '...';
-
+    
+    // ⭐⭐ استخدام الدالة الجديدة لعرض مختصر ⭐⭐
+    const shortStartArea = getShortAreaName(r.startArea);
+    const shortEndArea = getShortAreaName(r.endArea);
+    // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
 
     statusText.innerHTML=
       `🚖 طلب جديد<br>
-       من: **${r.startArea}** إلى: **${r.endArea}**<br>
+       **من:** **${shortStartArea}** **إلى:** **${shortEndArea}**<br>
        **مسافة الرحلة:** ${r.distance} كم<br>
        **الأجرة المتوقعة:** ${formattedFare} د.ع`;
 
@@ -417,7 +443,7 @@ async function handleAcceptedRide(id,r){
     
     // إخفاء لوحة التحكم وتكبير الخريطة 
     panelElement.style.display="none"; 
-    updateMapHeight(); // ⭐⭐ تحديث الارتفاع إلى 100vh ⭐⭐
+    updateMapHeight(); // تحديث الارتفاع إلى 100vh 
     
     // إظهار الأزرار العائمة
     floatingControls.style.display="flex";
@@ -449,7 +475,10 @@ async function handleAcceptedRide(id,r){
         map.setView([r.startLat, r.startLng], 14); // التركيز على الراكب
     }
 
-    statusText.innerHTML=`تم قبول الرحلة. في طريقك للراكب **(${r.startArea})**...`;
+    // ⭐⭐ استخدام الدالة الجديدة لعرض مختصر ⭐⭐
+    const shortStartArea = getShortAreaName(r.startArea);
+    statusText.innerHTML=`تم قبول الرحلة. في طريقك للراكب **(${shortStartArea})**...`;
+    // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
 
 
     // زر بدء الرحلة يقوم فقط بتحديث الحالة
@@ -475,7 +504,7 @@ async function handleStartedRide(id,r){
     
     // إخفاء لوحة التحكم وتكبير الخريطة 
     panelElement.style.display="none"; 
-    updateMapHeight(); // ⭐⭐ تحديث الارتفاع إلى 100vh ⭐⭐
+    updateMapHeight(); // تحديث الارتفاع إلى 100vh 
     
     // إظهار الأزرار العائمة
     floatingControls.style.display="flex";
@@ -494,8 +523,10 @@ async function handleStartedRide(id,r){
         </a>
     `;
     
-    // تحديث رسالة الحالة
-    statusText.innerHTML=`الرحلة بدأت! الوجهة: **${r.endArea}**`;
+    // ⭐⭐ استخدام الدالة الجديدة لعرض مختصر ⭐⭐
+    const shortEndArea = getShortAreaName(r.endArea);
+    statusText.innerHTML=`الرحلة بدأت! الوجهة: **${shortEndArea}**`;
+    // ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
     
     // مسار نقطة النهاية (من نقطة البداية إلى نقطة الوصول)
     if(r.startLat && r.startLng && r.endLat && r.endLng){
