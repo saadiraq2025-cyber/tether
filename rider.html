@@ -268,7 +268,8 @@ function startMonitoringRide(id){
         const distance = r.distance || 0;
         const fare = r.fare ? r.fare.toLocaleString('ar-IQ') : '---';
         
-        let statusHtml = `المسافة: **${distance} كم** — الأجرة: **${fare} د.ع**<br>`;
+        // تم إزالة النجوم هنا
+        let statusHtml = `المسافة: ${distance} كم — الأجرة: ${fare} د.ع<br>`;
         
         // **إعداد رابط الاتصال بالسائق ليتم استخدامه في الحالتين (مقبولة وبدأت)**
         let driverPhoneHtml = '';
@@ -303,7 +304,8 @@ function startMonitoringRide(id){
         } else if (r.status === "بدأت") {
              // **إظهار رابط الاتصال مجدداً وتحديث الرسالة**
              const shortEndArea = getShortAreaName(r.endArea);
-             document.getElementById("status").innerHTML=`🚦 الرحلة بدأت! في طريقك إلى **${shortEndArea}**<br>` + statusHtml + driverPhoneHtml; // تمت إضافة رابط الاتصال
+             // تم إزالة النجوم هنا
+             document.getElementById("status").innerHTML=`🚦 الرحلة بدأت! في طريقك إلى ${shortEndArea}<br>` + statusHtml + driverPhoneHtml; // تمت إضافة رابط الاتصال
              driverInfoDiv.style.display='block';
 
              // تحديث مسار السائق إلى نقطة النهاية
@@ -456,8 +458,9 @@ sendBtn.onclick=function(){
   const shortStartArea = getShortAreaName(startAreaName);
   const shortEndArea = getShortAreaName(endAreaName);
 
+  // تم إزالة النجوم هنا
   document.getElementById("status").innerHTML=
-    `تم الإرسال<br>من **${shortStartArea}** إلى **${shortEndArea}**<br>
+    `تم الإرسال<br>من ${shortStartArea} إلى ${shortEndArea}<br>
      المسافة: ${distance} كم — الأجرة: ${fare.toLocaleString('ar-IQ')} د.ع`;
   
   startMonitoringRide(rideId);
