@@ -31,16 +31,6 @@ body, html {
     flex-shrink: 0; 
 }
 
-/* النمط الجديد لرسالة الحالة لتكبير وتثخين الخط */
-#panel p#status {
-    font-size: 1.2em; /* تكبير الخط */
-    font-weight: bold; /* تثخين الخط */
-    margin: 10px 0;
-    line-height: 1.6;
-    color: #333;
-}
-
-
 /* تعديل ارتفاع الخريطة ليكون ديناميكياً */
 #map {
     height: calc(100vh - 120px); /* قيمة افتراضية سيتم تعديلها بواسطة JS */
@@ -103,7 +93,7 @@ button {
     font-size: 1em;
 }
 .phone-link:hover {
-    text-decoration: underline;
+    text_decoration: underline;
 }
 #startRideBtn {
     background: #ff9800;
@@ -439,6 +429,40 @@ db.ref("rides").on("value",snap=>{
 
     Object.keys(data).forEach(id=>{
         let r=data[id];
+        
+        // ⭐⭐ منطق جديد: التعامل مع إلغاء الرحلة من قِبَل الراكب/النظام ⭐⭐
+        if (r.status === "ملغاة" && r.driverPhone === driverPhone) {
+            
+            if (currentRideId === id) { // التحقق من أن هذه هي الرحلة التي يتابعها السائق حالياً
+                rideFound = true; 
+                stopRinging();
+                 
+                const cancelMessage = r.canceledBy === "rider" 
+                                    ? "⚠️ الراكب ألغى الرحلة." 
+                                    : "⚠️ تم إنهاء/إلغاء الرحلة من النظام.";
+
+                // تنظيف يدوي وتحديث للحالة
+                removeAllRideMarkers();
+                currentRideId=null;
+                currentRideData=null;
+                 
+                // إعادة تعيين واجهة المستخدم إلى حالة الانتظار
+                statusText.innerText = cancelMessage;
+                acceptBtn.style.display="none";
+                rejectBtn.style.display="none";
+                startRideBtn.style.display="none";
+                finishBtn.style.display="none";
+                wazeBtn.style.display="none";
+                riderContactInfo.style.display="none";
+                floatingControls.style.display="none";
+                logoutBtn.style.display="inline-block";
+                panelElement.style.display="block"; 
+                updateMapHeight();
+            }
+            return; // تخطي معالجة هذه الرحلة الملغاة
+        }
+        // ⭐⭐ نهاية منطق الإلغاء ⭐⭐
+        
         // معالجة الطلبات الجديدة
         if(r.status==="جديدة" && !rideFound){
             rideFound=true;
@@ -449,7 +473,7 @@ db.ref("rides").on("value",snap=>{
              rideFound=true;
              handleAcceptedRide(id,r);
         }
-        // معالجة الرحلات التي بدأت حالياً (تمت الإضافة)
+        // معالجة الرحلات التي بدأت حالياً 
         else if(r.status==="بدأت" && r.driverPhone===driverPhone){
              rideFound=true;
              handleStartedRide(id,r);
@@ -473,7 +497,10 @@ db.ref("rides").on("value",snap=>{
         floatingControls.style.display="none";
         
         logoutBtn.style.display="inline-block"; // إظهار زر تسجيل الخروج
-        statusText.innerText="في انتظار الطلبات...";
+        // عدم تحديث النص إذا كان قد تم تحديثه برسالة إلغاء للتو
+        if (!statusText.innerText.startsWith("⚠️")) {
+           statusText.innerText="في انتظار الطلبات...";
+        }
         
         // إظهار لوحة التحكم وإعادة حساب حجم الخريطة 
         panelElement.style.display="block"; 
@@ -509,17 +536,12 @@ function showRideRequest(id,r){
     // استخدام الدالة الجديدة لعرض مختصر 
     const shortStartArea = getShortAreaName(r.startArea);
     const shortEndArea = getShortAreaName(r.endArea);
-    
-    // تنسيق جديد لجعل الأرقام أكبر وأكثر وضوحًا
-    const fareStyle = "font-size: 1.1em; font-weight: bold; color: #e53935;"; // أحمر داكن للأجرة
-    const distanceStyle = "font-size: 1.1em; font-weight: bold; color: #455a64;"; // رمادي داكن للمسافة
 
-    // تم إزالة جميع النجوم وتطبيق تنسيقات المسافة والأجرة
     statusText.innerHTML=
       `🚖 طلب جديد<br>
-       من: ${shortStartArea} إلى: ${shortEndArea}<br>
-       مسافة الرحلة: <span style="${distanceStyle}">${r.distance} كم</span><br>
-       الأجرة المتوقعة: <span style="${fareStyle}">${formattedFare} د.ع</span>`;
+       **من:** **${shortStartArea}** **إلى:** **${shortEndArea}**<br>
+       **مسافة الرحلة:** ${r.distance} كم<br>
+       **الأجرة المتوقعة:** ${formattedFare} د.ع`;
 
     acceptBtn.style.display="inline-block";
     rejectBtn.style.display="inline-block";
@@ -588,8 +610,7 @@ async function handleAcceptedRide(id,r){
 
     // استخدام الدالة الجديدة لعرض مختصر 
     const shortStartArea = getShortAreaName(r.startArea);
-    // تم إزالة النجوم هنا
-    statusText.innerHTML=`تم قبول الرحلة. في طريقك للراكب (${shortStartArea})...`;
+    statusText.innerHTML=`تم قبول الرحلة. في طريقك للراكب **(${shortStartArea})**...`;
 
 
     // زر بدء الرحلة يقوم فقط بتحديث الحالة
@@ -636,8 +657,7 @@ async function handleStartedRide(id,r){
     
     // استخدام الدالة الجديدة لعرض مختصر 
     const shortEndArea = getShortAreaName(r.endArea);
-    // تم إزالة النجوم هنا
-    statusText.innerHTML=`الرحلة بدأت! الوجهة: ${shortEndArea}`;
+    statusText.innerHTML=`الرحلة بدأت! الوجهة: **${shortEndArea}**`;
     
     // مسار نقطة النهاية (من نقطة البداية إلى نقطة الوصول)
     if(r.startLat && r.startLng && r.endLat && r.endLng){
