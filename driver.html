@@ -499,17 +499,13 @@ function showRideRequest(id,r){
     // استخدام الدالة الجديدة لعرض مختصر 
     const shortStartArea = getShortAreaName(r.startArea);
     const shortEndArea = getShortAreaName(r.endArea);
-    
-    // تنسيق جديد لجعل الأرقام أكبر وأكثر وضوحًا
-    const fareStyle = "font-size: 1.1em; font-weight: bold; color: #e53935;"; // أحمر داكن للأجرة
-    const distanceStyle = "font-size: 1.1em; font-weight: bold; color: #455a64;"; // رمادي داكن للمسافة
 
-    // تم تعديل هذا الجزء لإزالة جميع النجوم
+    // تم إزالة جميع النجوم هنا
     statusText.innerHTML=
       `🚖 طلب جديد<br>
-       من: **${shortStartArea}** إلى: **${shortEndArea}**<br>
-       مسافة الرحلة: <span style="${distanceStyle}">${r.distance} كم</span><br>
-       الأجرة المتوقعة: <span style="${fareStyle}">${formattedFare} د.ع</span>`;
+       من: ${shortStartArea} إلى: ${shortEndArea}<br>
+       مسافة الرحلة: ${r.distance} كم<br>
+       الأجرة المتوقعة: ${formattedFare} د.ع`;
 
     acceptBtn.style.display="inline-block";
     rejectBtn.style.display="inline-block";
@@ -578,7 +574,8 @@ async function handleAcceptedRide(id,r){
 
     // استخدام الدالة الجديدة لعرض مختصر 
     const shortStartArea = getShortAreaName(r.startArea);
-    statusText.innerHTML=`تم قبول الرحلة. في طريقك للراكب **(${shortStartArea})**...`;
+    // تم إزالة النجوم هنا
+    statusText.innerHTML=`تم قبول الرحلة. في طريقك للراكب (${shortStartArea})...`;
 
 
     // زر بدء الرحلة يقوم فقط بتحديث الحالة
@@ -625,7 +622,8 @@ async function handleStartedRide(id,r){
     
     // استخدام الدالة الجديدة لعرض مختصر 
     const shortEndArea = getShortAreaName(r.endArea);
-    statusText.innerHTML=`الرحلة بدأت! الوجهة: **${shortEndArea}**`;
+    // تم إزالة النجوم هنا
+    statusText.innerHTML=`الرحلة بدأت! الوجهة: ${shortEndArea}`;
     
     // مسار نقطة النهاية (من نقطة البداية إلى نقطة الوصول)
     if(r.startLat && r.startLng && r.endLat && r.endLng){
