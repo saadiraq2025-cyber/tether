@@ -504,10 +504,10 @@ function showRideRequest(id,r){
     const fareStyle = "font-size: 1.1em; font-weight: bold; color: #e53935;"; // أحمر داكن للأجرة
     const distanceStyle = "font-size: 1.1em; font-weight: bold; color: #455a64;"; // رمادي داكن للمسافة
 
-    // تم تعديل هذا الجزء لإزالة النجوم حول "مسافة الرحلة:" و "الأجرة المتوقعة:"
+    // تم تعديل هذا الجزء لإزالة جميع النجوم
     statusText.innerHTML=
       `🚖 طلب جديد<br>
-       **من:** ${shortStartArea} **إلى:** ${shortEndArea}<br>
+       من: **${shortStartArea}** إلى: **${shortEndArea}**<br>
        مسافة الرحلة: <span style="${distanceStyle}">${r.distance} كم</span><br>
        الأجرة المتوقعة: <span style="${fareStyle}">${formattedFare} د.ع</span>`;
 
