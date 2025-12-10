@@ -245,11 +245,17 @@ async function startMonitoringDriver(driverPhone, startLat, startLng, endLat, en
         // منطق رسم المسار - استخدام دالة drawStreetRoute
         if (rideStatus === "مقبولة" && startLat && startLng) {
             // المسار من السائق إلى الراكب (نقطة البداية)
+            // استخدام إحداثيات السائق الحالية d.lat, d.lng
             await drawStreetRoute(d.lat, d.lng, startLat, startLng, '#4CAF50', '5, 5'); 
         } else if (rideStatus === "بدأت" && startLat && startLng && endLat && endLng) {
             // المسار من الراكب إلى الوجهة
-            await drawStreetRoute(startLat, startLng, endLat, endLng, '#1E90FF'); 
+            // نرسم من موقع السائق الحالي إلى الوجهة النهائية
+            await drawStreetRoute(d.lat, d.lng, endLat, endLng, '#1E90FF'); 
         }
+        
+        // التركيز على موقع السائق إذا كانت مقبولة/بدأت
+        map.setView(driverCoords, map.getZoom() > 14 ? map.getZoom() : 14);
+
     });
 }
 
@@ -304,12 +310,14 @@ function startMonitoringRide(id){
             driverInfoDiv.style.display='block';
             
             // البدء بتتبع موقع السائق
+            // نتحقق من عدم تغير رقم هاتف السائق لنتجنب إيقاف وبدء المراقبة دون داعي
             if (r.driverPhone !== currentDriverPhone) {
                 if(driverRef) driverRef.off(); 
                 currentDriverPhone = r.driverPhone;
+                // نمرر إحداثيات الراكب والوجهة وحالة الرحلة
                 startMonitoringDriver(r.driverPhone, r_startLat, r_startLng, r_endLat, r_endLng, r.status);
             } else if(driverRef) {
-                // تحديث المسار حتى لو لم يتغير السائق
+                // تحديث المسار حتى لو لم يتغير السائق (للتأكد من رسمه)
                 startMonitoringDriver(r.driverPhone, r_startLat, r_startLng, r_endLat, r_endLng, r.status);
             }
             logoutBtn.style.display='none'; // إخفاء زر تسجيل الخروج
