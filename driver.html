@@ -31,6 +31,16 @@ body, html {
     flex-shrink: 0; 
 }
 
+/* النمط الجديد لرسالة الحالة لتكبير وتثخين الخط */
+#panel p#status {
+    font-size: 1.2em; /* تكبير الخط */
+    font-weight: bold; /* تثخين الخط */
+    margin: 10px 0;
+    line-height: 1.6;
+    color: #333;
+}
+
+
 /* تعديل ارتفاع الخريطة ليكون ديناميكياً */
 #map {
     height: calc(100vh - 120px); /* قيمة افتراضية سيتم تعديلها بواسطة JS */
@@ -499,13 +509,17 @@ function showRideRequest(id,r){
     // استخدام الدالة الجديدة لعرض مختصر 
     const shortStartArea = getShortAreaName(r.startArea);
     const shortEndArea = getShortAreaName(r.endArea);
+    
+    // تنسيق جديد لجعل الأرقام أكبر وأكثر وضوحًا
+    const fareStyle = "font-size: 1.1em; font-weight: bold; color: #e53935;"; // أحمر داكن للأجرة
+    const distanceStyle = "font-size: 1.1em; font-weight: bold; color: #455a64;"; // رمادي داكن للمسافة
 
-    // تم إزالة جميع النجوم هنا
+    // تم إزالة جميع النجوم وتطبيق تنسيقات المسافة والأجرة
     statusText.innerHTML=
       `🚖 طلب جديد<br>
        من: ${shortStartArea} إلى: ${shortEndArea}<br>
-       مسافة الرحلة: ${r.distance} كم<br>
-       الأجرة المتوقعة: ${formattedFare} د.ع`;
+       مسافة الرحلة: <span style="${distanceStyle}">${r.distance} كم</span><br>
+       الأجرة المتوقعة: <span style="${fareStyle}">${formattedFare} د.ع</span>`;
 
     acceptBtn.style.display="inline-block";
     rejectBtn.style.display="inline-block";
