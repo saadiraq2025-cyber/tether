@@ -123,7 +123,7 @@ button {
 
 
 <div id="panel">
-    <h3>وضع السائق</h3>
+    <h3>🚖 وضع السائق</h3>
     <p id="status">في انتظار الطلبات...</p>
     
     <button id="acceptBtn" style="display:none;background:#4caf50;color:white;">قبول الرحلة</button>
@@ -476,6 +476,7 @@ function showRideRequest(id,r){
     currentRideData=r;
     
     // ⭐⭐ بدء الرنين عند ورود طلب جديد ⭐⭐
+    stopRinging(); // إيقاف أي رنين سابق قبل البدء
     startRinging();
 
     // إخفاء الأزرار المتبقية والعائمة
@@ -499,12 +500,16 @@ function showRideRequest(id,r){
     // استخدام الدالة الجديدة لعرض مختصر 
     const shortStartArea = getShortAreaName(r.startArea);
     const shortEndArea = getShortAreaName(r.endArea);
+    
+    // تنسيق جديد لجعل الأرقام أكبر وأكثر وضوحًا
+    const fareStyle = "font-size: 1.1em; font-weight: bold; color: #e53935;"; // أحمر داكن للأجرة
+    const distanceStyle = "font-size: 1.1em; font-weight: bold; color: #455a64;"; // رمادي داكن للمسافة
 
     statusText.innerHTML=
       `🚖 طلب جديد<br>
        **من:** **${shortStartArea}** **إلى:** **${shortEndArea}**<br>
-       **مسافة الرحلة:** ${r.distance} كم<br>
-       **الأجرة المتوقعة:** ${formattedFare} د.ع`;
+       **مسافة الرحلة:** <span style="${distanceStyle}">${r.distance} كم</span><br>
+       **الأجرة المتوقعة:** <span style="${fareStyle}">${formattedFare} د.ع</span>`;
 
     acceptBtn.style.display="inline-block";
     rejectBtn.style.display="inline-block";
