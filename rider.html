@@ -122,6 +122,9 @@ let rideRef=null;
 let driverRef=null; 
 let currentDriverPhone=null;
 
+// ⭐⭐ متغير جديد لتخزين مؤقت التتبع ⭐⭐
+let driverTrackingInterval = null; 
+
 const sendBtn=document.getElementById("sendRide");
 const endBtn=document.getElementById("cancelRideBtn");
 const searchInput=document.getElementById('searchInput');
@@ -171,8 +174,9 @@ async function drawStreetRoute(lat1, lng1, lat2, lng2, color, dashArray = '') {
     const OSRM_URL = `https://router.project-osrm.org/route/v1/driving/${lng1},${lat1};${lng2},${lat2}?geometries=geojson&overview=full`;
     
     // إزالة المسار الحالي قبل الرسم
-    clearRideMarkers(); 
-    
+    // (ملاحظة: driverMarker و driverRoute يتم تحديثهما في startMonitoringDriver) 
+    if(driverRoute) map.removeLayer(driverRoute);
+
     try {
         const response = await fetch(OSRM_URL);
         const data = await response.json();
@@ -191,13 +195,14 @@ async function drawStreetRoute(lat1, lng1, lat2, lng2, color, dashArray = '') {
             driverRoute = L.polyline(leafletCoords, { color: color, dashArray: dashArray, weight: 5 }).addTo(map);
         }
         
-        map.fitBounds(driverRoute.getBounds());
+        // لا داعي لتكبير/تصغير الخريطة في كل تحديث، نكتفي بالمسار الجديد
+        // map.fitBounds(driverRoute.getBounds());
 
     } catch (error) {
         console.error('Error fetching route from OSRM. Falling back to straight line.', error);
         // العودة إلى الرسم البسيط في حال الفشل
         driverRoute = L.polyline([[lat1, lng1], [lat2, lng2]], { color: color, dashArray: dashArray, weight: 5 }).addTo(map);
-        map.fitBounds(driverRoute.getBounds());
+        // map.fitBounds(driverRoute.getBounds());
     }
 }
 
@@ -205,6 +210,10 @@ async function drawStreetRoute(lat1, lng1, lat2, lng2, color, dashArray = '') {
 function cleanupRide(){
     if(rideRef) rideRef.off();
     if(driverRef) driverRef.off();
+    // ⭐⭐ إيقاف مؤقت التتبع ⭐⭐
+    if(driverTrackingInterval) clearInterval(driverTrackingInterval);
+    driverTrackingInterval = null;
+    
     rideRef = null;
     driverRef = null;
     currentDriverPhone = null;
@@ -219,11 +228,17 @@ function cleanupRide(){
     logoutBtn.style.display='inline-block'; // إظهار زر تسجيل الخروج
 }
 
-async function startMonitoringDriver(driverPhone, startLat, startLng, endLat, endLng, rideStatus){
-    driverRef = db.ref("drivers/"+driverPhone);
+// ⭐⭐ تعديل: استخدام التحديث كل 2 ثانية ⭐⭐
+async function startMonitoringDriver(driverPhone, startLat, startLng, endLat, endLng, rideStatus) {
+    // 1. إيقاف أي مؤقت سابق للتأكد من عدم وجود تحديثات مكررة
+    if(driverTrackingInterval) clearInterval(driverTrackingInterval); 
     
-    driverRef.on('value', async snap => { // جعل on('value') غير متزامنة
+    // 2. دالة التحديث التي سيتم استدعاؤها كل 2 ثانية
+    const updateDriverLocation = async () => {
+         // نستخدم once لجلب القيمة الحالية بدلاً من on للحصول على تحكم كامل بالتحديث (كل 2 ثانية)
+        const snap = await db.ref("drivers/"+driverPhone).once('value');
         const d = snap.val();
+
         if(!d || !d.lat || !d.lng) return;
 
         const driverCoords = [d.lat, d.lng];
@@ -233,7 +248,6 @@ async function startMonitoringDriver(driverPhone, startLat, startLng, endLat, en
 
         // تحديث مؤشر السائق
         if(driverMarker) map.removeLayer(driverMarker);
-        // استخدام أيقونة التاكسي المميزة
         driverMarker = L.marker(driverCoords, {
             icon: L.divIcon({
                 className: 'custom-driver-icon',
@@ -242,7 +256,7 @@ async function startMonitoringDriver(driverPhone, startLat, startLng, endLat, en
             })
         }).addTo(map).bindPopup("السائق").openPopup();
         
-        // منطق رسم المسار - استخدام دالة drawStreetRoute
+        // منطق رسم المسار
         if (rideStatus === "مقبولة" && startLat && startLng) {
             // المسار من السائق إلى الراكب (نقطة البداية)
             await drawStreetRoute(d.lat, d.lng, startLat, startLng, '#4CAF50', '5, 5'); 
@@ -250,7 +264,13 @@ async function startMonitoringDriver(driverPhone, startLat, startLng, endLat, en
             // المسار من الراكب إلى الوجهة
             await drawStreetRoute(startLat, startLng, endLat, endLng, '#1E90FF'); 
         }
-    });
+    };
+
+    // 3. استدعاء فوري لعرض الموقع الأولي
+    await updateDriverLocation(); 
+    
+    // 4. إعداد المؤقت ليتم الاستقصاء كل 2 ثانية (2000 مللي ثانية)
+    driverTrackingInterval = setInterval(updateDriverLocation, 2000); 
 }
 
 function startMonitoringRide(id){
@@ -294,6 +314,8 @@ function startMonitoringRide(id){
         if (r.status === "جديدة") {
             document.getElementById("status").innerHTML=`✅ تم الإرسال. في انتظار قبول السائق...<br>` + statusHtml;
             driverInfoDiv.style.display='none';
+            // ⭐⭐ إيقاف التتبع عند حالة "جديدة" ⭐⭐
+            if(driverTrackingInterval) clearInterval(driverTrackingInterval); 
             clearRideMarkers();
             logoutBtn.style.display='inline-block'; // إظهار الزر
             
@@ -305,13 +327,11 @@ function startMonitoringRide(id){
             
             // البدء بتتبع موقع السائق
             if (r.driverPhone !== currentDriverPhone) {
-                if(driverRef) driverRef.off(); 
+                // إيقاف أي تتبع سابق قبل البدء بتتبع سائق جديد
+                if(driverTrackingInterval) clearInterval(driverTrackingInterval); 
                 currentDriverPhone = r.driverPhone;
                 startMonitoringDriver(r.driverPhone, r_startLat, r_startLng, r_endLat, r_endLng, r.status);
-            } else if(driverRef) {
-                // تحديث المسار حتى لو لم يتغير السائق
-                startMonitoringDriver(r.driverPhone, r_startLat, r_startLng, r_endLat, r_endLng, r.status);
-            }
+            } 
             logoutBtn.style.display='none'; // إخفاء زر تسجيل الخروج
             
         } else if (r.status === "بدأت") {
@@ -323,10 +343,9 @@ function startMonitoringRide(id){
 
              // تحديث مسار السائق إلى نقطة النهاية
              if (r.driverPhone !== currentDriverPhone) {
-                if(driverRef) driverRef.off(); 
+                // إيقاف أي تتبع سابق قبل البدء بتتبع سائق جديد
+                if(driverTrackingInterval) clearInterval(driverTrackingInterval); 
                 currentDriverPhone = r.driverPhone;
-                startMonitoringDriver(r.driverPhone, r_startLat, r_startLng, r_endLat, r_endLng, r.status);
-            } else if(driverRef) {
                 startMonitoringDriver(r.driverPhone, r_startLat, r_startLng, r_endLat, r_endLng, r.status);
             }
             logoutBtn.style.display='none'; // إخفاء زر تسجيل الخروج
@@ -507,6 +526,10 @@ window.onload=function(){
 window.logout=function(){
     if(rideRef) rideRef.off();
     if(driverRef) driverRef.off();
+    // ⭐⭐ إيقاف المؤقت عند تسجيل الخروج ⭐⭐
+    if(driverTrackingInterval) clearInterval(driverTrackingInterval);
+    driverTrackingInterval = null;
+
     localStorage.removeItem('phone');
     localStorage.removeItem('userType');
     localStorage.removeItem('activeRideId');
