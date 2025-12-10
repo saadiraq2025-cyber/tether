@@ -22,6 +22,15 @@ body,html{margin:0;padding:0;height:100%;font-family:Tahoma;}
 #panel{background:#fff;text-align:center;padding:10px;box-shadow:0 -2px 5px rgba(0,0,0,0.2);}
 button{background:#ffca28;border:none;padding:10px 20px;border-radius:8px;font-weight:bold;cursor:pointer;margin:5px;}
 
+/* نمط جديد لرسالة الحالة لتكبير وتثخين الخط */
+#panel p#status {
+    font-size: 1.2em; /* تكبير الخط */
+    font-weight: bold; /* تثخين الخط */
+    margin: 10px 0;
+    line-height: 1.6;
+    color: #333;
+}
+
 #searchContainer{margin:10px 0;padding:0 10px;}
 #searchInput{
     width:100%;padding:10px;border:1px solid #ccc;border-radius:5px;
@@ -224,7 +233,7 @@ async function startMonitoringDriver(driverPhone, startLat, startLng, endLat, en
 
         // تحديث مؤشر السائق
         if(driverMarker) map.removeLayer(driverMarker);
-        // **استخدام أيقونة التاكسي المميزة**
+        // استخدام أيقونة التاكسي المميزة
         driverMarker = L.marker(driverCoords, {
             icon: L.divIcon({
                 className: 'custom-driver-icon',
@@ -250,6 +259,10 @@ function startMonitoringRide(id){
     sendBtn.style.display='none';
     searchContainer.style.display='none';
 
+    // تنسيقات مضافة حديثاً لجعل الأجرة والمسافة بارزة
+    const fareStyle = "font-size: 1em; font-weight: bold; color: #E53935;"; 
+    const distanceStyle = "font-size: 1em; font-weight: bold; color: #455A64;"; 
+
     // مراقبة حالة الرحلة
     rideRef.on('value', snap => {
         const r = snap.val();
@@ -268,10 +281,10 @@ function startMonitoringRide(id){
         const distance = r.distance || 0;
         const fare = r.fare ? r.fare.toLocaleString('ar-IQ') : '---';
         
-        // تم إزالة النجوم هنا
-        let statusHtml = `المسافة: ${distance} كم — الأجرة: ${fare} د.ع<br>`;
+        // إزالة النجوم وتطبيق التنسيق الداخلي
+        let statusHtml = `المسافة: <span style="${distanceStyle}">${distance} كم</span> — الأجرة: <span style="${fareStyle}">${fare} د.ع</span><br>`;
         
-        // **إعداد رابط الاتصال بالسائق ليتم استخدامه في الحالتين (مقبولة وبدأت)**
+        // إعداد رابط الاتصال بالسائق ليتم استخدامه في الحالتين (مقبولة وبدأت)
         let driverPhoneHtml = '';
         if (r.driverPhone) {
             driverPhoneHtml = `<a href="tel:${r.driverPhone}" class="phone-link">📞 اتصل بالسائق: ${r.driverPhone}</a>`;
@@ -302,9 +315,9 @@ function startMonitoringRide(id){
             logoutBtn.style.display='none'; // إخفاء زر تسجيل الخروج
             
         } else if (r.status === "بدأت") {
-             // **إظهار رابط الاتصال مجدداً وتحديث الرسالة**
+             // إظهار رابط الاتصال مجدداً وتحديث الرسالة
              const shortEndArea = getShortAreaName(r.endArea);
-             // تم إزالة النجوم هنا
+             // إزالة النجوم
              document.getElementById("status").innerHTML=`🚦 الرحلة بدأت! في طريقك إلى ${shortEndArea}<br>` + statusHtml + driverPhoneHtml; // تمت إضافة رابط الاتصال
              driverInfoDiv.style.display='block';
 
@@ -319,7 +332,8 @@ function startMonitoringRide(id){
             logoutBtn.style.display='none'; // إخفاء زر تسجيل الخروج
              
         } else if (r.status === "منتهية" || r.status === "ملغاة" || r.status === "مرفوضة") {
-            document.getElementById("status").innerHTML=`الرحلة **${r.status}**.`;
+            // إزالة النجوم
+            document.getElementById("status").innerHTML=`الرحلة ${r.status}.`;
             cleanupRide(); 
         }
     });
@@ -458,10 +472,14 @@ sendBtn.onclick=function(){
   const shortStartArea = getShortAreaName(startAreaName);
   const shortEndArea = getShortAreaName(endAreaName);
 
-  // تم إزالة النجوم هنا
+  // تنسيقات مضافة حديثاً لجعل الأجرة والمسافة بارزة
+  const fareStyle = "font-size: 1em; font-weight: bold; color: #E53935;"; 
+  const distanceStyle = "font-size: 1em; font-weight: bold; color: #455A64;"; 
+  
+  // إزالة النجوم وتطبيق التنسيق الداخلي
   document.getElementById("status").innerHTML=
     `تم الإرسال<br>من ${shortStartArea} إلى ${shortEndArea}<br>
-     المسافة: ${distance} كم — الأجرة: ${fare.toLocaleString('ar-IQ')} د.ع`;
+     المسافة: <span style="${distanceStyle}">${distance} كم</span> — الأجرة: <span style="${fareStyle}">${fare.toLocaleString('ar-IQ')} د.ع</span>`;
   
   startMonitoringRide(rideId);
 };
