@@ -170,8 +170,9 @@ async function drawStreetRoute(lat1, lng1, lat2, lng2, color, dashArray = '') {
     // خدمة OSRM تتطلب الإحداثيات بصيغة: lng,lat
     const OSRM_URL = `https://router.project-osrm.org/route/v1/driving/${lng1},${lat1};${lng2},${lat2}?geometries=geojson&overview=full`;
     
-    // إزالة المسار الحالي قبل الرسم
-    clearRideMarkers(); 
+    // إزالة المسار الحالي قبل الرسم (نُزيل المسار فقط، لأن مؤشر السائق يتم تحديثه في startMonitoringDriver)
+    if(driverRoute) map.removeLayer(driverRoute); 
+    driverRoute = null;
     
     try {
         const response = await fetch(OSRM_URL);
@@ -242,15 +243,15 @@ async function startMonitoringDriver(driverPhone, startLat, startLng, endLat, en
             })
         }).addTo(map).bindPopup("السائق").openPopup();
         
-        // منطق رسم المسار - استخدام دالة drawStreetRoute
+        // منطق رسم المسار: نرسم فقط عندما تكون الحالة "مقبولة" (أي في طريقه للوصول للراكب)
         if (rideStatus === "مقبولة" && startLat && startLng) {
             // المسار من السائق إلى الراكب (نقطة البداية)
             // استخدام إحداثيات السائق الحالية d.lat, d.lng
             await drawStreetRoute(d.lat, d.lng, startLat, startLng, '#4CAF50', '5, 5'); 
-        } else if (rideStatus === "بدأت" && startLat && startLng && endLat && endLng) {
-            // المسار من الراكب إلى الوجهة
-            // نرسم من موقع السائق الحالي إلى الوجهة النهائية
-            await drawStreetRoute(d.lat, d.lng, endLat, endLng, '#1E90FF'); 
+        } else {
+            // إذا كانت "بدأت" أو حالة أخرى لا تتطلب تتبع الوصول، نزيل المسار
+            if(driverRoute) map.removeLayer(driverRoute);
+            driverRoute = null;
         }
         
         // التركيز على موقع السائق إذا كانت مقبولة/بدأت
@@ -300,6 +301,7 @@ function startMonitoringRide(id){
         if (r.status === "جديدة") {
             document.getElementById("status").innerHTML=`✅ تم الإرسال. في انتظار قبول السائق...<br>` + statusHtml;
             driverInfoDiv.style.display='none';
+            // نضمن مسح أي مسار أو سائق قديم
             clearRideMarkers();
             logoutBtn.style.display='inline-block'; // إظهار الزر
             
@@ -309,8 +311,7 @@ function startMonitoringRide(id){
             document.getElementById("status").innerHTML=`🚖 تم قبول الرحلة! السائق قادم إليك (${shortStartArea}).<br>` + statusHtml + driverPhoneHtml;
             driverInfoDiv.style.display='block';
             
-            // البدء بتتبع موقع السائق
-            // نتحقق من عدم تغير رقم هاتف السائق لنتجنب إيقاف وبدء المراقبة دون داعي
+            // البدء بتتبع موقع السائق ورسم المسار إليه
             if (r.driverPhone !== currentDriverPhone) {
                 if(driverRef) driverRef.off(); 
                 currentDriverPhone = r.driverPhone;
@@ -326,10 +327,10 @@ function startMonitoringRide(id){
              // إظهار رابط الاتصال مجدداً وتحديث الرسالة
              const shortEndArea = getShortAreaName(r.endArea);
              // إزالة النجوم
-             document.getElementById("status").innerHTML=`🚦 الرحلة بدأت! في طريقك إلى ${shortEndArea}<br>` + statusHtml + driverPhoneHtml; // تمت إضافة رابط الاتصال
+             document.getElementById("status").innerHTML=`🚦 الرحلة بدأت! في طريقك إلى ${shortEndArea}<br>` + statusHtml + driverPhoneHtml;
              driverInfoDiv.style.display='block';
 
-             // تحديث مسار السائق إلى نقطة النهاية
+             // تحديث موقع السائق (مع إزالة المسار داخلياً في startMonitoringDriver)
              if (r.driverPhone !== currentDriverPhone) {
                 if(driverRef) driverRef.off(); 
                 currentDriverPhone = r.driverPhone;
