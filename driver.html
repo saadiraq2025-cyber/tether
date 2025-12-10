@@ -508,8 +508,8 @@ function showRideRequest(id,r){
     statusText.innerHTML=
       `🚖 طلب جديد<br>
        **من:** **${shortStartArea}** **إلى:** **${shortEndArea}**<br>
-       **مسافة الرحلة:** <span style="${distanceStyle}">${r.distance} كم</span><br>
-       **الأجرة المتوقعة:** <span style="${fareStyle}">${formattedFare} د.ع</span>`;
+       مسافة الرحلة: <span style="${distanceStyle}">${r.distance} كم</span><br>
+       الأجرة المتوقعة: <span style="${fareStyle}">${formattedFare} د.ع</span>`;
 
     acceptBtn.style.display="inline-block";
     rejectBtn.style.display="inline-block";
