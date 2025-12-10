@@ -174,9 +174,8 @@ async function drawStreetRoute(lat1, lng1, lat2, lng2, color, dashArray = '') {
     const OSRM_URL = `https://router.project-osrm.org/route/v1/driving/${lng1},${lat1};${lng2},${lat2}?geometries=geojson&overview=full`;
     
     // إزالة المسار الحالي قبل الرسم
-    // (ملاحظة: driverMarker و driverRoute يتم تحديثهما في startMonitoringDriver) 
     if(driverRoute) map.removeLayer(driverRoute);
-
+    
     try {
         const response = await fetch(OSRM_URL);
         const data = await response.json();
@@ -195,7 +194,7 @@ async function drawStreetRoute(lat1, lng1, lat2, lng2, color, dashArray = '') {
             driverRoute = L.polyline(leafletCoords, { color: color, dashArray: dashArray, weight: 5 }).addTo(map);
         }
         
-        // لا داعي لتكبير/تصغير الخريطة في كل تحديث، نكتفي بالمسار الجديد
+        // لا داعي لتكبير/تصغير الخريطة في كل تحديث
         // map.fitBounds(driverRoute.getBounds());
 
     } catch (error) {
@@ -209,7 +208,6 @@ async function drawStreetRoute(lat1, lng1, lat2, lng2, color, dashArray = '') {
 
 function cleanupRide(){
     if(rideRef) rideRef.off();
-    if(driverRef) driverRef.off();
     // ⭐⭐ إيقاف مؤقت التتبع ⭐⭐
     if(driverTrackingInterval) clearInterval(driverTrackingInterval);
     driverTrackingInterval = null;
