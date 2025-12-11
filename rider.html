@@ -17,7 +17,7 @@
 
 <style>
 body,html{margin:0;padding:0;height:100%;font-family:Tahoma;}
-#map{height:100vh;position:relative;}
+#map{height:100vh;position:relative; padding-top: 80px;} /* إضافة مسافة لأسفل شريط البحث */
 #panel{
     position:fixed;
     bottom:0;
@@ -135,8 +135,83 @@ button{
     flex-shrink: 0;
 }
 
+/* حاوية البحث الجديدة في الأعلى */
+#searchContainer {
+    position: fixed;
+    top: 15px;
+    left: 10px;
+    right: 10px;
+    z-index: 1001; /* فوق كل شيء آخر */
+    display: flex;
+    background: #fff;
+    border-radius: 25px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    padding: 8px 15px;
+    align-items: center;
+}
+
+#search-icon {
+    font-size: 1.2em;
+    color: #666;
+    margin-right: 10px;
+    order: 3; /* الأيقونة في الأقصى اليسار */
+}
+
+#search-input {
+    flex-grow: 1;
+    border: none;
+    outline: none;
+    font-size: 1.1em;
+    padding: 0;
+    margin-left: 10px;
+    text-align: right;
+    direction: rtl; /* لضمان الكتابة من اليمين لليسار */
+    order: 2;
+}
+
+/* نمط زر العودة */
+#back-button {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    color: #333;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 10px;
+    order: 1; /* زر العودة في الأقصى اليمين */
+}
+
+/* قائمة نتائج البحث */
+#searchResults {
+    position: absolute;
+    top: 55px; /* تحت شريط البحث */
+    left: 10px;
+    right: 10px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1002;
+    max-height: 50vh;
+    overflow-y: auto;
+    display: none; /* إخفاؤها في البداية */
+}
+
+.search-result-item {
+    padding: 10px 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    text-align: right;
+}
+
+.search-result-item:hover {
+    background: #f5f5f5;
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
 /* إخفاء العناصر القديمة أو إعادة تصميمها */
-#searchContainer{display:none;} /* إخفاء البحث القديم */
 #driverInfo{display:none;}
 #logoutBtn{display:none; width:auto; background:#607d8b; padding:10px 20px;}
 #cancelRideBtn{background:#E53935;color:white; display:none;}
@@ -147,7 +222,18 @@ button{
 <body>
 
 <div id="map"></div>
-<div id="map-center-pin">📍</div> <div id="panel">
+<div id="map-center-pin">📍</div>
+
+<div id="searchContainer">
+    <button id="back-button" onclick="history.back()">&#x2039;</button> 
+    <input type="text" id="search-input" placeholder="أبحث عن مكان" />
+    <span id="search-icon">🔍</span>
+</div>
+
+<div id="searchResults">
+    </div>
+
+<div id="panel">
 
     <div id="pointContainer">
         <div class="point-field">
@@ -216,6 +302,11 @@ const oldStatus = document.getElementById("status"); // تم إخفاؤه
 const changeStartBtn = document.getElementById("changeStartPointBtn");
 const changeEndBtn = document.getElementById("changeEndPointBtn");
 
+// عناصر البحث الجديدة
+const searchInput = document.getElementById("search-input");
+const searchResultsContainer = document.getElementById("searchResults");
+
+
 // ---------------- وظائف المساعدة والـ Geocoding ----------------
 
 // الدالة: استخلاص الاسم الأقصر للمنطقة (للعرض فقط) - تستخدم الاسم الذي يأتي من reverseGeocode
@@ -253,7 +344,7 @@ async function reverseGeocode(lat, lon) {
 
         if (d && d.display_name) {
             const address = d.address;
-            // قائمة بالعناوين التي قد تكون POI - تم إضافة المزيد بناءً على الصورة (مطعم، مخازن أدوية، أفران)
+            // قائمة بالعناوين التي قد تكون POI 
             const poiKeys = ['amenity', 'shop', 'building', 'restaurant', 'bakery', 'pharmacy', 'supermarket', 'public_building']; 
             
             let poiName = null;
@@ -418,6 +509,75 @@ map.on('move', function() {
     }
 });
 
+// ---------------- وظائف البحث الجديدة ----------------
+
+let searchTimer = null;
+
+searchInput.addEventListener('input', function() {
+    clearTimeout(searchTimer);
+    const query = searchInput.value.trim();
+
+    if (query.length < 3) {
+        searchResultsContainer.style.display = 'none';
+        searchResultsContainer.innerHTML = '';
+        return;
+    }
+
+    searchTimer = setTimeout(() => {
+        performGeocoding(query);
+    }, 700);
+});
+
+async function performGeocoding(query) {
+    // تحديد حدود البحث (Bounding Box) لتركيز النتائج على العراق/المنطقة
+    const bbox = '43.3,30.0,48.5,37.3'; // تقريبي للعراق
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=10&countrycodes=iq&viewbox=${bbox}&bounded=1&accept-language=ar`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        displaySearchResults(data);
+    } catch (error) {
+        console.error("Geocoding error:", error);
+        searchResultsContainer.style.display = 'none';
+    }
+}
+
+function displaySearchResults(results) {
+    searchResultsContainer.innerHTML = '';
+    
+    if (results.length === 0) {
+        searchResultsContainer.innerHTML = '<div class="search-result-item" style="color:#e53935;">لا توجد نتائج مطابقة.</div>';
+        searchResultsContainer.style.display = 'block';
+        return;
+    }
+
+    results.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'search-result-item';
+        div.innerText = item.display_name;
+        
+        // عند النقر على النتيجة، نركز الخريطة عليها ونحددها كنقطة انطلاق/وصول
+        div.onclick = function() {
+            const lat = parseFloat(item.lat);
+            const lng = parseFloat(item.lon);
+            
+            map.setView([lat, lng], 16); // نركز الخريطة ونقرب
+            
+            // محاكاة تحريك الخريطة لتحديث الإحداثيات والاسم
+            map.fire('moveend'); 
+            
+            // إخفاء قائمة النتائج وتفريغ مربع البحث
+            searchResultsContainer.style.display = 'none';
+            searchInput.value = '';
+        };
+        searchResultsContainer.appendChild(div);
+    });
+
+    searchResultsContainer.style.display = 'block';
+}
+
+
 // ---------------- وظائف التحكم بالأزرار ----------------
 
 // وظيفة الزر الرئيسي (تثبيت الانطلاق -> تثبيت الوصول -> إرسال الطلب)
@@ -478,6 +638,9 @@ function sendRideRequest(){
   costDisplay.style.display='none';
   changeStartBtn.style.display = 'none';
   changeEndBtn.style.display = 'none';
+  
+  // إخفاء قائمة البحث
+  searchResultsContainer.style.display = 'none';
 
   db.ref("rides/"+rideId).set({
     riderPhone:phone,
