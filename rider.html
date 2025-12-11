@@ -310,65 +310,82 @@ const searchResultsContainer = document.getElementById("searchResults");
 
 // ---------------- وظائف المساعدة والـ Geocoding ----------------
 
-// الدالة: استخلاص الاسم الأقصر للمنطقة (للعرض فقط) - تستخدم الاسم الذي يأتي من reverseGeocode
+/**
+ * الدالة: استخلاص الاسم الأقصر للمنطقة (للعرض فقط)
+ * الهدف: إظهار العنوان الذي تم تنقيته بالفعل من reverseGeocode.
+ */
 function getShortAreaName(fullArea) {
     if (!fullArea) return "منطقة غير معروفة";
-    
-    // إذا كان الاسم قصيراً، نفترضه اسم معلم بارز ونرجعه مباشرة
-    if (fullArea.length < 50 && !fullArea.includes(',')) {
-        return fullArea; 
-    }
-    
-    // المنطق القديم للعنوان الطويل
-    const parts = fullArea.split(',').map(p => p.trim()).filter(p => p.length > 0);
-    
-    const relevantParts = parts.filter(p => 
-        !p.includes("قضاء") && 
-        !p.includes("ناحية") && 
-        !p.includes("مركز") &&
-        !p.includes("بغداد") 
-    );
-
-    if (relevantParts.length > 0) {
-        return relevantParts[0]; 
-    }
-    
-    return parts[parts.length - 1]; 
+    // في هذا الإصدار، العنوان المستخلص من reverseGeocode هو بالفعل العنوان الأوضح والأقصر.
+    return fullArea; 
 }
 
-// reverse geocode (تم التعديل لجلب أسماء المعالم البارزة)
+
+/**
+ * الدالة: reverseGeocode
+ * الهدف: جلب العنوان الأكثر دقة ووضوحاً بالصيغة: المدينة - الحي/المنطقة - POI/الشارع
+ */
 async function reverseGeocode(lat, lon) {
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ar`;
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&accept-language=ar`;
     try {
         const r = await fetch(url);
         const d = await r.json();
 
-        if (d && d.display_name) {
+        if (d && d.address) {
             const address = d.address;
-            // قائمة بالعناوين التي قد تكون POI 
-            const poiKeys = ['amenity', 'shop', 'building', 'restaurant', 'bakery', 'pharmacy', 'supermarket', 'public_building']; 
             
+            // استخلاص المكونات الرئيسية
+            const city = address.city || address.town || address.village || address.county || '';
+            const district = address.suburb || address.quarter || address.city_district || '';
+            const road = address.road || '';
+            
+            // 1. الأولوية للمعالم البارزة (POI)
+            const poiKeys = ['amenity', 'shop', 'building', 'restaurant', 'bakery', 'pharmacy', 'supermarket', 'mosque', 'clinic', 'college', 'school']; 
             let poiName = null;
+            
             for (const key of poiKeys) {
-                if (address[key]) {
+                if (address[key] && typeof address[key] === 'string' && address[key].length > 3 && address[key].length < 50) {
                     poiName = address[key];
                     break; 
                 }
             }
 
-            // التأكد من أن اسم المعلم البارز معقول (ليس طويلاً جداً)
-            if (poiName && typeof poiName === 'string' && poiName.length > 3 && poiName.length < 50) {
-                return poiName;
+            // بناء العنوان النهائي
+            const parts = [];
+            
+            // 1. المدينة (بغداد)
+            if (city && city.toLowerCase() !== 'iraq' && city.length < 20) {
+                parts.push(city);
+            }
+            
+            // 2. المنطقة/الحي (العبيدي، حي النصر)
+            if (district && district.toLowerCase() !== (city ? city.toLowerCase() : '')) {
+                parts.push(district);
+            }
+            
+            // 3. المعلم البارز (POI) أو الشارع
+            if (poiName) {
+                // نفضل إضافة "قرب"
+                parts.push(`قرب ${poiName}`);
+            } else if (road && road.length < 30) {
+                // إضافة الشارع (مثل شارع المطبك) إذا لم نجد معلم بارز
+                parts.push(`شارع ${road}`);
+            }
+            
+            // إذا تم بناء عنوان واضح، نرجعه
+            if (parts.length >= 2) {
+                return parts.join(' - '); // مثال: بغداد - العبيدي - قرب جامع
             }
 
-            // وإلا، نرجع العنوان المفصل المعتاد
-            return d.display_name.split(',').slice(0, 3).reverse().join(', ');
+            // 4. كحل أخير، نرجع الاسم المعروض بالكامل ونختصره جداً (3 أجزاء)
+            return d.display_name.split(',').slice(0, 3).join(' - ');
         }
         return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
     } catch {
         return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
     }
 }
+
 
 // حساب المسافة والأجرة
 function calculateDistanceAndFare(lat1, lng1, lat2, lng2) {
