@@ -158,7 +158,7 @@ button{
 }
 
 #search-input {
-    flex-grow: 1;
+    flex-grow = 1;
     border: none;
     outline: none;
     font-size: 1.1em;
@@ -262,7 +262,7 @@ button{
 const app=firebase.initializeApp({
   apiKey:"AIzaSyBZy7GTKn62CqeXAgm2fLrXI67P4Lc4Q3M",
   authDomain:"taxi-15314.firebaseapp.com",
-  databaseURL:"https://taxi-15314-default-rtdb.firebaseio.com/",
+  databaseURL:"https://taxi-15314-default-rtdb.realtime-database.app/",
   projectId:"taxi-15314"
 });
 const db=firebase.database();
@@ -322,8 +322,8 @@ function getShortAreaName(fullArea) {
 
 
 /**
- * الدالة: reverseGeocode
- * الهدف: جلب العنوان الأكثر دقة ووضوحاً بالصيغة: المدينة - الحي/المنطقة - POI/الشارع
+ * الدالة: reverseGeocode - تم التحديث لضمان التنسيق (المدينة - الحي/المنطقة - المعلم البارز/الشارع)
+ * الهدف: جلب العنوان الأكثر دقة ووضوحاً بالصيغة المطلوبة.
  */
 async function reverseGeocode(lat, lon) {
     const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&accept-language=ar`;
@@ -344,7 +344,8 @@ async function reverseGeocode(lat, lon) {
             let poiName = null;
             
             for (const key of poiKeys) {
-                if (address[key] && typeof address[key] === 'string' && address[key].length > 3 && address[key].length < 50) {
+                // نأخذ أول معلم بارز نجد اسمه ليس رقماً
+                if (address[key] && typeof address[key] === 'string' && isNaN(address[key])) { 
                     poiName = address[key];
                     break; 
                 }
@@ -353,32 +354,37 @@ async function reverseGeocode(lat, lon) {
             // بناء العنوان النهائي
             const parts = [];
             
-            // 1. المدينة (بغداد)
-            if (city && city.toLowerCase() !== 'iraq' && city.length < 20) {
-                parts.push(city);
+            // 1. المدينة (بغداد) - فقط إذا كانت موجودة وبغداد
+            if (city.includes('بغداد') || city.includes('Baghdad') || city.includes('bagdad')) {
+                parts.push('بغداد');
+            } else if (city) {
+                 parts.push(city);
             }
             
-            // 2. المنطقة/الحي (العبيدي، حي النصر)
-            if (district && district.toLowerCase() !== (city ? city.toLowerCase() : '')) {
+            // 2. المنطقة/الحي (العبيدي، الكمالية)
+            if (district && district.toLowerCase() !== (city ? city.toLowerCase() : '') && district.length > 2) {
                 parts.push(district);
             }
             
-            // 3. المعلم البارز (POI) أو الشارع
+            // 3. المعلم البارز أو الشارع
             if (poiName) {
-                // نفضل إضافة "قرب"
+                // نفضل إضافة "قرب" أو اسم الشارع إن كانا واضحين
                 parts.push(`قرب ${poiName}`);
-            } else if (road && road.length < 30) {
-                // إضافة الشارع (مثل شارع المطبك) إذا لم نجد معلم بارز
+            } else if (road && road.length > 5 && road.length < 50) {
+                // إضافة الشارع (مثل شارع المطبك، شارع المصرف)
                 parts.push(`شارع ${road}`);
-            }
-            
-            // إذا تم بناء عنوان واضح، نرجعه
-            if (parts.length >= 2) {
-                return parts.join(' - '); // مثال: بغداد - العبيدي - قرب جامع
+            } else if (address.pedestrian) {
+                // إضافة اسم منطقة فرعية أخرى إذا كان هناك
+                parts.push(address.pedestrian); 
             }
 
-            // 4. كحل أخير، نرجع الاسم المعروض بالكامل ونختصره جداً (3 أجزاء)
-            return d.display_name.split(',').slice(0, 3).join(' - ');
+            // إذا لم يكن لدينا ما يكفي من الأجزاء، نرجع العنوان المختصر من Nominatim
+            if (parts.length >= 2) {
+                return parts.filter((v, i, a) => a.indexOf(v) === i).join(' - '); // نفلتر المكرر ونرجع
+            }
+
+            // كحل أخير، نرجع الاسم المعروض بالكامل ونختصره لـ 3 أجزاء
+            return d.display_name.split(',').slice(0, 3).reverse().join(' - ');
         }
         return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
     } catch {
