@@ -278,6 +278,7 @@ async function updateUIForStage() {
     if (rideId) {
         // حالة الرحلة قيد المراقبة
         // يتم التعامل مع الأزرار والعرض من خلال startMonitoringRide
+        // نتأكد من إخفاء أزرار التثبيت في هذه الحالة
         return; 
     }
 
@@ -288,6 +289,7 @@ async function updateUIForStage() {
     if (currentStage === "settingStart") {
         mainActionBtn.innerText = "تثبيت الانطلاق";
         mainActionBtn.disabled = !startCoords;
+        mainActionBtn.style.background = '#f97316';
         startPointValue.innerText = startAreaName ? getShortAreaName(startAreaName) : 'جاري التحقق من المنطقة...';
         endPointValue.innerText = 'حدد نقطة الوصول...';
         endPointValue.style.color = '#f97316';
@@ -295,6 +297,7 @@ async function updateUIForStage() {
     } else if (currentStage === "settingEnd") {
         mainActionBtn.innerText = "تثبيت الوصول";
         mainActionBtn.disabled = !endCoords;
+        mainActionBtn.style.background = '#f97316';
         startPointValue.innerText = getShortAreaName(startAreaName);
         endPointValue.innerText = endAreaName ? getShortAreaName(endAreaName) : 'جاري التحقق من المنطقة...';
         endPointValue.style.color = '#666';
@@ -304,7 +307,7 @@ async function updateUIForStage() {
             const { distance, fare } = calculateDistanceAndFare(startCoords[0], startCoords[1], endCoords[0], endCoords[1]);
             fareValue.innerText = fare.toLocaleString('ar-IQ');
             costDisplay.style.display = 'block';
-            mainActionBtn.innerText = "إرسال الطلب";
+            mainActionBtn.innerText = "إرسال الطلب"; // يتغير نص الزر إلى "إرسال الطلب" عند وجود النقطتين
         } else {
             fareValue.innerText = '---';
             costDisplay.style.display = 'none';
@@ -315,6 +318,7 @@ async function updateUIForStage() {
         // هذه المرحلة تحدث قبل إرسال الطلب مباشرةً
         mainActionBtn.innerText = "إرسال الطلب";
         mainActionBtn.disabled = !(startCoords && endCoords);
+        mainActionBtn.style.background = '#f97316';
         changeStartBtn.style.display = 'inline-block';
         changeEndBtn.style.display = 'inline-block';
         pin.style.display = 'none';
@@ -469,12 +473,7 @@ cancelRideBtn.onclick=function(){
     alert(`تم إلغاء الطلب.`); // استخدام alert بسيط بدلاً من تحديث حقل الحالة القديم
     
     // العودة إلى مرحلة تحديد الانطلاق بعد الإلغاء
-    currentStage = "settingStart";
-    startCoords = null;
-    startAreaName = "";
-    endCoords = null;
-    endAreaName = "";
-    initGeolocation(); // إعادة تحديد الموقع الحالي
+    initGeolocation(); // إعادة تحديد الموقع الحالي وتحديث الواجهة
 };
 
 
@@ -496,7 +495,10 @@ async function drawStreetRoute(lat1, lng1, lat2, lng2, color, dashArray = '') {
     map.fitBounds(driverRoute.getBounds());
 }
 
-
+/**
+ * دالة تنظيف حالة الرحلة وإعادة الواجهة إلى وضع تحديد الانطلاق.
+ * تم التأكد من إعادة تعيين جميع المتغيرات الخاصة بنقاط الانطلاق والوصول.
+ */
 function cleanupRide(){
     if(rideRef) rideRef.off();
     if(driverRef) driverRef.off();
@@ -506,18 +508,19 @@ function cleanupRide(){
     localStorage.removeItem('activeRideId');
     clearRideMarkers();
     
-    // إظهار زر الإجراء الرئيسي والعودة لوضع الاختيار
-    mainActionBtn.style.display='block';
-    cancelRideBtn.style.display='none';
-    pin.style.display = 'block';
-    
-    // إعادة تهيئة الواجهة
+    // إعادة تعيين حالة الواجهة إلى وضع البدء
     currentStage = "settingStart";
+    rideId = null;
     startCoords = null;
     endCoords = null;
     startAreaName = "";
     endAreaName = "";
-    updateUIForStage();
+    
+    // يتم تحديث الواجهة عند استدعاء initGeolocation لاحقاً
+    
+    // إخفاء زر الإلغاء
+    cancelRideBtn.style.display='none';
+    
 }
 
 async function startMonitoringDriver(driverPhone, startLat, startLng, endLat, endLng, rideStatus){
@@ -567,6 +570,7 @@ function startMonitoringRide(id){
         if(!r) {
             cleanupRide();
             alert(`⚠️ انتهت الرحلة أو ألغيت من النظام.`);
+            initGeolocation(); // تحديث الواجهة بعد التنظيف
             return;
         }
         
@@ -613,6 +617,7 @@ function startMonitoringRide(id){
         } else if (r.status === "منتهية" || r.status === "ملغاة" || r.status === "مرفوضة") {
             alert(`الرحلة ${r.status}.`);
             cleanupRide(); 
+            initGeolocation(); // تحديث الواجهة بعد التنظيف
         }
     });
 }
@@ -639,15 +644,19 @@ function initGeolocation() {
       
     },async err=>{
         // في حال فشل تحديد الموقع، نبدأ من بغداد وننتظر حركة الخريطة لتحديد الموقع
-        startAreaName = await reverseGeocode(map.getCenter().lat, map.getCenter().lng);
-        startCoords = [map.getCenter().lat, map.getCenter().lng];
+        const center = map.getCenter();
+        startAreaName = await reverseGeocode(center.lat, center.lng);
+        startCoords = [center.lat, center.lng];
+        
         alert("⚠️ لم يتم تحديد الموقع بدقة، يرجى تثبيت نقطة الانطلاق بتحريك الخريطة.");
+        
         rideId = localStorage.getItem('activeRideId');
          if(rideId){
             map.whenReady(() => {
                 startMonitoringRide(rideId);
             });
          } else {
+            // يتم تحديث الواجهة لتبدأ عملية تحديد الانطلاق باستخدام الدبوس
             await updateUIForStage();
          }
         
