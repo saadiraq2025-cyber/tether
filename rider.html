@@ -310,33 +310,37 @@ const searchResultsContainer = document.getElementById("searchResults");
 
 // ---------------- وظائف المساعدة والـ Geocoding ----------------
 
-// الدالة: استخلاص الاسم الأقصر للمنطقة (للعرض فقط) - تستخدم الاسم الذي يأتي من reverseGeocode
+/**
+ * الدالة: استخلاص اسم المنطقة الواضح (للعرض فقط) - تستخدم الاسم الذي يأتي من reverseGeocode
+ * الهدف: عرض العنوان الأكثر تفصيلاً والمناسب للعرض مثل "بغداد - العبيدي - حي الرئاسة"
+ */
 function getShortAreaName(fullArea) {
     if (!fullArea) return "منطقة غير معروفة";
     
-    // إذا كان الاسم قصيراً، نفترضه اسم معلم بارز ونرجعه مباشرة
-    if (fullArea.length < 50 && !fullArea.includes(',')) {
-        return fullArea; 
+    // محاولة تنظيف وتقصير العنوان مع الاحتفاظ بالمعلومات الهامة (مدينة، منطقة، حي)
+    
+    // إزالة الأرقام وأسماء الشوارع غير الضرورية في نهاية العنوان
+    let parts = fullArea.split(',').map(p => p.trim()).filter(p => p.length > 0);
+    
+    // إذا كان العنوان طويلاً جداً (أكثر من 5 أجزاء)، نأخذ الأجزاء الأكثر أهمية من النهاية (المدينة والمنطقة)
+    if (parts.length > 5) {
+        parts = parts.slice(parts.length - 5); 
     }
     
-    // المنطق القديم للعنوان الطويل
-    const parts = fullArea.split(',').map(p => p.trim()).filter(p => p.length > 0);
-    
-    const relevantParts = parts.filter(p => 
-        !p.includes("قضاء") && 
-        !p.includes("ناحية") && 
-        !p.includes("مركز") &&
-        !p.includes("بغداد") 
-    );
+    // تنقية بسيطة لإزالة أجزاء لا تهم الراكب (مثل رموز البوست)
+    parts = parts.filter(p => !/\d{5,}/.test(p) && p.toLowerCase() !== 'iraq' && p.toLowerCase() !== 'العراق');
 
-    if (relevantParts.length > 0) {
-        return relevantParts[0]; 
-    }
+    // إعادة تجميع الأجزاء الأكثر أهمية (3-4 أجزاء)
+    const shortAddress = parts.slice(-4).join(' - '); // نأخذ 4 أجزاء على الأكثر
     
-    return parts[parts.length - 1]; 
+    if (shortAddress.length > 0) {
+        return shortAddress;
+    }
+
+    return fullArea; // نرجع العنوان بالكامل إذا فشل التقصير
 }
 
-// reverse geocode (تم التعديل لجلب أسماء المعالم البارزة)
+// reverse geocode (تم التعديل لإرجاع العنوان المفصل للعرض)
 async function reverseGeocode(lat, lon) {
     const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ar`;
     try {
@@ -344,25 +348,8 @@ async function reverseGeocode(lat, lon) {
         const d = await r.json();
 
         if (d && d.display_name) {
-            const address = d.address;
-            // قائمة بالعناوين التي قد تكون POI 
-            const poiKeys = ['amenity', 'shop', 'building', 'restaurant', 'bakery', 'pharmacy', 'supermarket', 'public_building']; 
-            
-            let poiName = null;
-            for (const key of poiKeys) {
-                if (address[key]) {
-                    poiName = address[key];
-                    break; 
-                }
-            }
-
-            // التأكد من أن اسم المعلم البارز معقول (ليس طويلاً جداً)
-            if (poiName && typeof poiName === 'string' && poiName.length > 3 && poiName.length < 50) {
-                return poiName;
-            }
-
-            // وإلا، نرجع العنوان المفصل المعتاد
-            return d.display_name.split(',').slice(0, 3).reverse().join(', ');
+             // **التعديل:** إرجاع العنوان المفصل بالكامل ليتم التعامل معه في getShortAreaName
+            return d.display_name; 
         }
         return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
     } catch {
@@ -647,7 +634,7 @@ function sendRideRequest(){
     riderPhone:phone,
     startLat:startCoords[0], startLng:startCoords[1], 
     endLat:endCoords[0], endLng:endCoords[1],         
-    startArea:startAreaName,endArea:endAreaName, 
+    startArea:getShortAreaName(startAreaName),endArea:getShortAreaName(endAreaName), // **تم التعديل**: حفظ الاسم القصير في قاعدة البيانات
     distance:distance,fare:fare,status:"جديدة"
   });
 
@@ -800,7 +787,7 @@ function startMonitoringRide(id){
         } else if (r.status === "بدأت") {
              mainActionBtn.style.display = 'none';
              cancelRideBtn.style.display='inline-block';
-             alert(`🚦 الرحلة بدأت! في طريقك إلى ${getShortAreaName(r.endArea)}`);
+             alert(`🚦 الرحلة بدأت! في طريقك إلى ${r.endArea}`); // استخدام r.endArea لأنه تم حفظه مختصراً
 
              if (r.driverPhone !== currentDriverPhone) {
                 if(driverRef) driverRef.off(); 
@@ -841,7 +828,7 @@ function initGeolocation() {
         const defaultLat = 33.3603;
         const defaultLng = 44.5066;
         
-        startAreaName = "بغداد - العبيدي - حي الرئاسة"; // تعيين الاسم الافتراضي
+        startAreaName = "العراق, محافظة بغداد, بغداد, حي الرئاسة, العبيدي"; // تعيين الاسم الافتراضي المفصل
         startCoords = [defaultLat, defaultLng];
         
         alert("⚠️ لم يتم تحديد الموقع بدقة، يرجى تثبيت نقطة الانطلاق بتحريك الخريطة.");
