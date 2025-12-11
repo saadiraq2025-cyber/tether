@@ -218,9 +218,16 @@ const changeEndBtn = document.getElementById("changeEndPointBtn");
 
 // ---------------- وظائف المساعدة والـ Geocoding ----------------
 
-// الدالة: استخلاص الاسم الأقصر للمنطقة (للعرض فقط)
+// الدالة: استخلاص الاسم الأقصر للمنطقة (للعرض فقط) - تستخدم الاسم الذي يأتي من reverseGeocode
 function getShortAreaName(fullArea) {
     if (!fullArea) return "منطقة غير معروفة";
+    
+    // إذا كان الاسم قصيراً، نفترضه اسم معلم بارز ونرجعه مباشرة
+    if (fullArea.length < 50 && !fullArea.includes(',')) {
+        return fullArea; 
+    }
+    
+    // المنطق القديم للعنوان الطويل
     const parts = fullArea.split(',').map(p => p.trim()).filter(p => p.length > 0);
     
     const relevantParts = parts.filter(p => 
@@ -237,15 +244,38 @@ function getShortAreaName(fullArea) {
     return parts[parts.length - 1]; 
 }
 
-// reverse geocode
-async function reverseGeocode(lat,lon){
-  const url=`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ar`;
-  try{
-    const r=await fetch(url);const d=await r.json();
-    // نرجع العنوان المفصل (المقصوص)
-    if(d&&d.display_name) return d.display_name.split(',').slice(0,3).reverse().join(', ');
-    return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-  }catch{return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;}
+// reverse geocode (تم التعديل لجلب أسماء المعالم البارزة)
+async function reverseGeocode(lat, lon) {
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ar`;
+    try {
+        const r = await fetch(url);
+        const d = await r.json();
+
+        if (d && d.display_name) {
+            const address = d.address;
+            // قائمة بالعناوين التي قد تكون POI - تم إضافة المزيد بناءً على الصورة (مطعم، مخازن أدوية، أفران)
+            const poiKeys = ['amenity', 'shop', 'building', 'restaurant', 'bakery', 'pharmacy', 'supermarket', 'public_building']; 
+            
+            let poiName = null;
+            for (const key of poiKeys) {
+                if (address[key]) {
+                    poiName = address[key];
+                    break; 
+                }
+            }
+
+            // التأكد من أن اسم المعلم البارز معقول (ليس طويلاً جداً)
+            if (poiName && typeof poiName === 'string' && poiName.length > 3 && poiName.length < 50) {
+                return poiName;
+            }
+
+            // وإلا، نرجع العنوان المفصل المعتاد
+            return d.display_name.split(',').slice(0, 3).reverse().join(', ');
+        }
+        return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+    } catch {
+        return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+    }
 }
 
 // حساب المسافة والأجرة
