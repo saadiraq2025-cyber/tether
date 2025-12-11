@@ -267,8 +267,8 @@ const app=firebase.initializeApp({
 });
 const db=firebase.database();
 
-// **تم التحديث:** تغيير الموقع الافتراضي لمركز الخريطة إلى حي النصر (بغداد)
-let map=L.map('map').setView([33.385, 44.455],14); 
+// **تم التحديث:** تغيير الموقع الافتراضي لمركز الخريطة إلى العبيدي، حي الرئاسة
+let map=L.map('map').setView([33.3603, 44.5066],14); 
 
 L.tileLayer(
   "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&key=AIzaSyD7TtwniAdUtB8-pnTny4ZwE6gqX36SGUk",
@@ -837,11 +837,11 @@ function initGeolocation() {
       }
       
     },async err=>{
-        // **تم التحديث:** في حال فشل تحديد الموقع، نستخدم إحداثيات حي النصر (بغداد) كافتراضي
-        const defaultLat = 33.385;
-        const defaultLng = 44.455;
+        // **تم التحديث:** في حال فشل تحديد الموقع، نستخدم إحداثيات العبيدي حي الرئاسة كافتراضي
+        const defaultLat = 33.3603;
+        const defaultLng = 44.5066;
         
-        startAreaName = "بغداد - حي النصر"; // تعيين الاسم الافتراضي
+        startAreaName = "بغداد - العبيدي - حي الرئاسة"; // تعيين الاسم الافتراضي
         startCoords = [defaultLat, defaultLng];
         
         alert("⚠️ لم يتم تحديد الموقع بدقة، يرجى تثبيت نقطة الانطلاق بتحريك الخريطة.");
