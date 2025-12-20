@@ -1,41 +1,34 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>خريطة حفظ المحلات والأماكن</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
-    body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background: #f4f4f4;
-    }
-    #map {
-        height: 70vh;
-    }
-    .panel {
-        padding: 10px;
-        background: white;
-    }
-    input, button {
-        padding: 8px;
-        margin: 5px 0;
-        width: 100%;
-        font-size: 14px;
-    }
-    ul {
-        list-style: none;
-        padding: 0;
-    }
-    li {
-        background: #eee;
-        margin: 5px 0;
-        padding: 8px;
-        border-radius: 4px;
-        cursor: pointer;
-    }
+  body{margin:0;font-family:Arial,sans-serif;background:#f4f4f4}
+  #map{height:62vh}
+  .panel{padding:10px;background:#fff}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .row > *{flex:1}
+  input,button{padding:10px;font-size:14px;border:1px solid #ddd;border-radius:8px}
+  button{cursor:pointer;background:#111;color:#fff;border:none}
+  button.secondary{background:#4a4a4a}
+  button.danger{background:#b00020}
+  button.ok{background:#0b6}
+  .hint{font-size:12px;color:#666;margin:6px 0 0}
+  ul{list-style:none;padding:0;margin:10px 0 0}
+  li{
+    background:#f2f2f2;margin:8px 0;padding:10px;border-radius:10px
+  }
+  .liTop{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+  .name{font-weight:bold}
+  .coords{font-size:12px;color:#555;direction:ltr;text-align:left}
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
+  .actions button{padding:8px 10px;font-size:13px}
+  .badge{font-size:12px;background:#e6f7ff;color:#036;border-radius:999px;padding:4px 10px}
 </style>
 </head>
 
@@ -44,75 +37,228 @@
 <div id="map"></div>
 
 <div class="panel">
-    <input type="text" id="placeName" placeholder="اسم المحلة أو المكان">
-    <button onclick="savePlace()">💾 حفظ المكان</button>
 
-    <h3>📌 الأماكن المحفوظة</h3>
-    <ul id="placesList"></ul>
+  <div class="row">
+    <input id="placeName" type="text" placeholder="اسم المحلة أو المكان" />
+    <button class="ok" onclick="savePlace()">💾 حفظ</button>
+  </div>
+
+  <div class="row" style="margin-top:8px">
+    <input id="searchBox" type="text" placeholder="🔍 بحث بالاسم..." oninput="renderPlaces()" />
+    <button class="secondary" onclick="locateMe()">📍 موقعي الحالي</button>
+    <button class="secondary" onclick="fitAll()">🗺️ عرض الكل</button>
+  </div>
+
+  <div class="hint">اضغط على الخريطة لاختيار نقطة، ثم اكتب الاسم واضغط حفظ. البحث يفلتر القائمة مباشرة.</div>
+
+  <h3 style="margin:12px 0 6px">📌 الأماكن المحفوظة <span class="badge" id="countBadge">0</span></h3>
+  <ul id="placesList"></ul>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-let map = L.map('map').setView([33.3152, 44.3661], 12); // بغداد افتراضياً
-let selectedMarker = null;
-let places = JSON.parse(localStorage.getItem("savedPlaces")) || [];
+  // ====== إعدادات ======
+  const STORAGE_KEY = "savedPlaces_v2";
+  let places = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  let map = L.map('map').setView([33.3152, 44.3661], 12); // بغداد افتراضياً
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap'
-}).addTo(map);
+  }).addTo(map);
 
-// عند الضغط على الخريطة
-map.on('click', function(e) {
-    if (selectedMarker) {
-        map.removeLayer(selectedMarker);
+  // Marker لاختيار نقطة جديدة/تعديل
+  let pickMarker = null;
+  let editingId = null; // إذا في تعديل
+
+  // Marker لموقعي الحالي
+  let myMarker = null;
+
+  // ====== اختيار نقطة بالنقر ======
+  map.on('click', (e) => {
+    setPickMarker(e.latlng);
+  });
+
+  function setPickMarker(latlng){
+    if(pickMarker) map.removeLayer(pickMarker);
+    pickMarker = L.marker(latlng, {draggable:true}).addTo(map);
+    pickMarker.on('dragend', () => {
+      // فقط تحديث النقطة المختارة، لا شيء آخر
+    });
+  }
+
+  // ====== حفظ/تحديث ======
+  function savePlace(){
+    const nameEl = document.getElementById("placeName");
+    const name = (nameEl.value || "").trim();
+
+    if(!pickMarker){
+      alert("حدد مكاناً على الخريطة أولاً.");
+      return;
     }
-    selectedMarker = L.marker(e.latlng).addTo(map);
-});
-
-// حفظ المكان
-function savePlace() {
-    if (!selectedMarker) {
-        alert("حدد مكاناً على الخريطة أولاً");
-        return;
-    }
-    let name = document.getElementById("placeName").value;
-    if (!name) {
-        alert("اكتب اسم المحلة أو المكان");
-        return;
+    if(!name){
+      alert("اكتب اسم المحلة أو المكان.");
+      return;
     }
 
-    let place = {
-        name: name,
-        lat: selectedMarker.getLatLng().lat,
-        lng: selectedMarker.getLatLng().lng
-    };
+    const latlng = pickMarker.getLatLng();
+    const now = new Date().toISOString();
 
-    places.push(place);
-    localStorage.setItem("savedPlaces", JSON.stringify(places));
-    document.getElementById("placeName").value = "";
-    loadPlaces();
-}
+    if(editingId){
+      // تحديث
+      const idx = places.findIndex(p => p.id === editingId);
+      if(idx !== -1){
+        places[idx].name = name;
+        places[idx].lat = latlng.lat;
+        places[idx].lng = latlng.lng;
+        places[idx].updatedAt = now;
+      }
+      editingId = null;
+    }else{
+      // إضافة جديد
+      const place = {
+        id: crypto.randomUUID ? crypto.randomUUID() : (Date.now() + "_" + Math.random().toString(16).slice(2)),
+        name,
+        lat: latlng.lat,
+        lng: latlng.lng,
+        createdAt: now,
+        updatedAt: now
+      };
+      places.push(place);
+    }
 
-// تحميل الأماكن المحفوظة
-function loadPlaces() {
-    let list = document.getElementById("placesList");
+    persist();
+    nameEl.value = "";
+    if(pickMarker){ map.removeLayer(pickMarker); pickMarker = null; }
+    renderPlaces();
+  }
+
+  // ====== تعديل ======
+  function editPlace(id){
+    const p = places.find(x => x.id === id);
+    if(!p) return;
+
+    editingId = id;
+    document.getElementById("placeName").value = p.name;
+
+    setPickMarker([p.lat, p.lng]);
+    map.setView([p.lat, p.lng], 16);
+
+    alert("وضع التعديل: عدّل الاسم أو اسحب العلامة ثم اضغط حفظ ✅");
+  }
+
+  // ====== حذف ======
+  function deletePlace(id){
+    const p = places.find(x => x.id === id);
+    if(!p) return;
+    if(!confirm(`حذف المكان: "${p.name}" ؟`)) return;
+
+    places = places.filter(x => x.id !== id);
+    persist();
+    renderPlaces();
+  }
+
+  // ====== الذهاب للمكان ======
+  function goToPlace(id){
+    const p = places.find(x => x.id === id);
+    if(!p) return;
+
+    map.setView([p.lat, p.lng], 17);
+    L.marker([p.lat, p.lng]).addTo(map).bindPopup(p.name).openPopup();
+  }
+
+  // ====== بحث/عرض القائمة ======
+  function renderPlaces(){
+    const q = (document.getElementById("searchBox").value || "").trim().toLowerCase();
+    const list = document.getElementById("placesList");
     list.innerHTML = "";
 
-    places.forEach((p, index) => {
-        let li = document.createElement("li");
-        li.textContent = p.name;
-        li.onclick = () => {
-            map.setView([p.lat, p.lng], 16);
-            L.marker([p.lat, p.lng]).addTo(map)
-             .bindPopup(p.name).openPopup();
-        };
-        list.appendChild(li);
-    });
-}
+    const filtered = places
+      .slice()
+      .sort((a,b) => (b.updatedAt||"").localeCompare(a.updatedAt||""))
+      .filter(p => !q || (p.name||"").toLowerCase().includes(q));
 
-// عرض الأماكن عند الفتح
-loadPlaces();
+    document.getElementById("countBadge").textContent = filtered.length;
+
+    filtered.forEach(p => {
+      const li = document.createElement("li");
+
+      const top = document.createElement("div");
+      top.className = "liTop";
+
+      const left = document.createElement("div");
+      left.innerHTML = `<div class="name">${escapeHtml(p.name)}</div>
+                        <div class="coords">${fmt(p.lat)}, ${fmt(p.lng)}</div>`;
+
+      const actions = document.createElement("div");
+      actions.className = "actions";
+
+      const btnGo = mkBtn("📍 عرض", "secondary", () => goToPlace(p.id));
+      const btnEdit = mkBtn("✏️ تعديل", "ok", () => editPlace(p.id));
+      const btnDel = mkBtn("🗑️ حذف", "danger", () => deletePlace(p.id));
+
+      actions.append(btnGo, btnEdit, btnDel);
+
+      top.append(left, actions);
+      li.appendChild(top);
+      list.appendChild(li);
+    });
+  }
+
+  // ====== موقعي الحالي ======
+  function locateMe(){
+    if(!navigator.geolocation){
+      alert("ميزة تحديد الموقع غير مدعومة على جهازك.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
+        if(myMarker) map.removeLayer(myMarker);
+        myMarker = L.marker([lat,lng]).addTo(map).bindPopup("موقعي الحالي").openPopup();
+        map.setView([lat,lng], 16);
+      },
+      (err) => {
+        alert("تعذر الحصول على موقعك. فعّل GPS واسمح للمتصفح بالموقع.");
+      },
+      { enableHighAccuracy:true, timeout:10000, maximumAge:0 }
+    );
+  }
+
+  // ====== عرض كل العلامات ======
+  function fitAll(){
+    if(!places.length){
+      alert("لا توجد أماكن محفوظة بعد.");
+      return;
+    }
+    const bounds = L.latLngBounds(places.map(p => [p.lat, p.lng]));
+    map.fitBounds(bounds, { padding:[30,30] });
+  }
+
+  function persist(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(places));
+  }
+
+  function mkBtn(text, cls, onClick){
+    const b = document.createElement("button");
+    b.textContent = text;
+    b.className = cls;
+    b.onclick = onClick;
+    return b;
+  }
+
+  function fmt(n){ return (Math.round(n * 1000000) / 1000000).toFixed(6); }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, (m) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[m]));
+  }
+
+  // ====== بدء التشغيل ======
+  renderPlaces();
 </script>
 
 </body>
