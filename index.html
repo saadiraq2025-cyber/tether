@@ -3,19 +3,29 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>نظام الخرائط - تسجيل ذاتي</title>
+<title>نظام الخرائط المتطور</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
-:root{--primary:#0b6;--danger:#b00020;--dark:#111}
+:root{--primary:#0b6;--danger:#b00020;--waze:#33ccff;--dark:#111}
 body{margin:0;font-family:sans-serif;background:#f4f4f4;direction:rtl}
-#authContainer,#appContainer{display:none;padding:20px}
-.card{background:#fff;padding:20px;border-radius:15px;box-shadow:0 4px 10px rgba(0,0,0,0.1);max-width:400px;margin:50px auto}
+#authContainer,#appContainer{display:none;padding:15px}
+.card{background:#fff;padding:20px;border-radius:15px;box-shadow:0 4px 10px rgba(0,0,0,0.1);max-width:400px;margin:30px auto}
 input,button{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #ddd;box-sizing:border-box}
 button{background:var(--dark);color:#fff;border:none;cursor:pointer;font-weight:bold}
-.status-bar{background:#eee;padding:10px;text-align:center;font-size:14px;border-radius:8px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
-#map{height:50vh;border-radius:15px;margin-bottom:10px}
+.status-bar{background:#fff;padding:10px;display:flex;justify-content:space-between;align-items:center;border-radius:10px;margin-bottom:10px;box-shadow:0 2px 5px rgba(0,0,0,0.05)}
+#map{height:45vh;border-radius:15px;margin-bottom:10px;z-index:1}
 .active{display:block !important}
-.link-btn{background:none;color:#0b6;text-decoration:underline;font-size:13px;border:none;cursor:pointer;width:auto}
+.link-btn{background:none;color:#555;text-decoration:underline;font-size:12px;border:none;cursor:pointer;width:auto;margin:5px}
+
+/* تنسيق قائمة الأماكن */
+.place-item{background:#fff; margin:10px 0; padding:12px; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.05); border-right:5px solid var(--primary)}
+.place-info{cursor:pointer; margin-bottom:8px}
+.place-name{font-weight:bold; font-size:16px; color:#333}
+.place-actions{display:flex; gap:5px}
+.btn-action{flex:1; padding:8px; font-size:12px; border-radius:5px; color:#fff}
+.btn-waze{background:var(--waze); color:#003}
+.btn-edit{background:#4a4a4a}
+.btn-del{background:var(--danger)}
 </style>
 </head>
 <body>
@@ -26,39 +36,43 @@ button{background:var(--dark);color:#fff;border:none;cursor:pointer;font-weight:
         <input type="text" id="loginPhone" placeholder="رقم الهاتف">
         <input type="password" id="loginPass" placeholder="كلمة المرور">
         <button onclick="login()">دخول</button>
-        <button class="link-btn" onclick="toggleAuth(false)">ليس لديك حساب؟ سجل الآن</button>
+        <div style="text-align:center">
+            <button class="link-btn" onclick="forgotPass()">نسيت كلمة السر؟</button>
+            <button class="link-btn" onclick="toggleAuth(false)">إنشاء حساب جديد</button>
+        </div>
     </div>
 
     <div class="card" id="registerBox" style="display:none">
-        <h2>إنشاء حساب جديد</h2>
+        <h2>حساب جديد</h2>
         <input type="text" id="regPhone" placeholder="رقم الهاتف">
         <input type="password" id="regPass" placeholder="كلمة المرور">
-        <button style="background:var(--primary)" onclick="register()">إنشاء الحساب</button>
-        <button class="link-btn" onclick="toggleAuth(true)">لديك حساب؟ سجل دخول</button>
+        <button style="background:var(--primary)" onclick="register()">تأكيد التسجيل</button>
+        <button class="link-btn" onclick="toggleAuth(true)">العودة للدخول</button>
     </div>
 </div>
 
 <div id="appContainer">
     <div class="status-bar">
-        <span>👤 <span id="userName">...</span></span>
-        <span>📅 انتهاء: <span id="subStatus">...</span></span>
-        <button style="width:auto; padding:5px 10px; background:red" onclick="logout()">خروج</button>
+        <span>👤 <small id="userName">...</small></span>
+        <button style="width:auto; padding:5px 10px; background:var(--danger)" onclick="logout()">خروج</button>
     </div>
     
     <div id="map"></div>
 
     <div class="panel">
-        <input id="placeName" placeholder="اسم المكان المراد حفظه">
-        <button style="background:var(--primary)" onclick="savePlace()">💾 حفظ الموقع الحالي</button>
-        <button style="background:#4a4a4a" onclick="locateMe()">📍 تحديث موقعي</button>
-        <ul id="placesList" style="list-style:none; padding:0"></ul>
+        <input id="placeName" placeholder="اسم المكان (للحفظ أو التعديل)">
+        <button id="saveBtn" style="background:var(--primary)" onclick="savePlace()">💾 حفظ الموقع المختار</button>
+        <button style="background:#4a4a4a" onclick="locateMe()">📍 أين أنا الآن؟</button>
+        
+        <h3 style="margin-top:20px">📍 أماكني المحفوظة</h3>
+        <div id="placesList"></div>
     </div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, getDocs, collection, addDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, getDocs, collection, addDoc, query, where, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
  apiKey: "AIzaSyA_3TFx5dUR3JbcXj5jFIZ_mpjWeco7FVo",
@@ -73,34 +87,23 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let currentUser = null;
-let map, pickMarker;
+let map, pickMarker, editingId = null;
 
-// تبديل بين التسجيل والدخول
+// --- إدارة الحسابات ---
 window.toggleAuth = (isLogin) => {
     document.getElementById('loginBox').style.display = isLogin ? 'block' : 'none';
     document.getElementById('registerBox').style.display = isLogin ? 'none' : 'block';
 };
 
-// إنشاء حساب جديد
 window.register = async () => {
     const phone = document.getElementById('regPhone').value.trim();
     const pass = document.getElementById('regPass').value.trim();
-    
-    if(!phone || !pass) return alert("يرجى ملء البيانات");
-    
+    if(!phone || !pass) return alert("أكمل البيانات");
     const userRef = doc(db, "users", phone);
     const check = await getDoc(userRef);
-    if(check.exists()) return alert("هذا الرقم مسجل مسبقاً");
-
-    // إنشاء الحساب مع فترة تجريبية 5 دقائق للاختبار
-    await setDoc(userRef, {
-        password: pass,
-        isBlocked: false,
-        expiry: Date.now() + (5 * 60 * 1000), 
-        created: Date.now()
-    });
-    
-    alert("تم إنشاء الحساب بنجاح! يمكنك الدخول الآن.");
+    if(check.exists()) return alert("الرقم مسجل مسبقاً");
+    await setDoc(userRef, { password: pass, isBlocked: false, expiry: Date.now() + (24*60*60*1000) });
+    alert("تم التسجيل! يمكنك الدخول الآن.");
     toggleAuth(true);
 };
 
@@ -108,24 +111,24 @@ window.login = async () => {
     const phone = document.getElementById('loginPhone').value.trim();
     const pass = document.getElementById('loginPass').value.trim();
     const userDoc = await getDoc(doc(db, "users", phone));
-
     if(userDoc.exists() && userDoc.data().password === pass) {
-        const data = userDoc.data();
-        if(data.isBlocked) return alert("هذا الحساب محظور من قبل الإدارة");
-        if(data.expiry < Date.now()) return alert("انتهى اشتراكك، تواصل مع الإدارة للتجديد");
-        
-        currentUser = {id: phone, ...data};
+        if(userDoc.data().isBlocked) return alert("الحساب محظور");
+        if(userDoc.data().expiry < Date.now()) return alert("انتهى الاشتراك");
+        currentUser = {id: phone, ...userDoc.data()};
         showApp();
-    } else {
-        alert("خطأ في رقم الهاتف أو كلمة المرور");
-    }
+    } else alert("بيانات خاطئة");
 };
 
+window.forgotPass = () => {
+    const p = prompt("أدخل رقم هاتفك المسجل:");
+    if(p) alert("يرجى التواصل مع الإدارة على الواتساب لإعادة تعيين كلمة السر للرقم: " + p);
+};
+
+// --- إدارة الخريطة والأماكن ---
 function showApp() {
     document.getElementById('authContainer').classList.remove('active');
     document.getElementById('appContainer').classList.add('active');
     document.getElementById('userName').innerText = currentUser.id;
-    document.getElementById('subStatus').innerText = new Date(currentUser.expiry).toLocaleString('ar-EG');
     initMap();
     loadPlaces();
 }
@@ -136,35 +139,75 @@ function initMap() {
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
     map.on("click", e => {
         if(pickMarker) map.removeLayer(pickMarker);
-        pickMarker = L.marker(e.latlng).addTo(map);
+        pickMarker = L.marker(e.latlng, {draggable: true}).addTo(map);
     });
 }
 
-window.locateMe = () => {
-    map.locate({setView: true, maxZoom: 16});
-};
+window.locateMe = () => map.locate({setView: true, maxZoom: 16});
 
 window.savePlace = async () => {
     const name = document.getElementById('placeName').value;
-    if(!pickMarker || !name) return alert("حدد موقعاً على الخريطة أولاً واكتب الاسم");
+    if(!pickMarker || !name) return alert("حدد موقعاً واسماً");
     const {lat, lng} = pickMarker.getLatLng();
-    await addDoc(collection(db, "places"), {
-        name, lat, lng, userId: currentUser.id
-    });
+
+    if(editingId) {
+        await updateDoc(doc(db, "places", editingId), { name, lat, lng });
+        editingId = null;
+        document.getElementById('saveBtn').innerText = "💾 حفظ الموقع المختار";
+    } else {
+        await addDoc(collection(db, "places"), { name, lat, lng, userId: currentUser.id });
+    }
+    
     document.getElementById('placeName').value = "";
-    alert("تم حفظ المكان");
+    if(pickMarker) map.removeLayer(pickMarker);
+    pickMarker = null;
     loadPlaces();
 };
 
-async function loadPlaces() {
+window.loadPlaces = async () => {
     const q = query(collection(db, "places"), where("userId", "==", currentUser.id));
     const snap = await getDocs(q);
     const list = document.getElementById('placesList');
     list.innerHTML = "";
     snap.forEach(d => {
-        list.innerHTML += `<li style="background:#fff; margin:8px 0; padding:12px; border-radius:10px; border-right:4px solid var(--primary)">📍 ${d.data().name}</li>`;
+        const p = d.data();
+        list.innerHTML += `
+            <div class="place-item">
+                <div class="place-info" onclick="goTo(${p.lat}, ${p.lng}, '${p.name}')">
+                    <div class="place-name">📍 ${p.name}</div>
+                    <small style="color:#777">إضغط للانتقال في الخريطة</small>
+                </div>
+                <div class="place-actions">
+                    <button class="btn-action btn-waze" onclick="openWaze(${p.lat}, ${p.lng})">Waze 🚗</button>
+                    <button class="btn-action btn-edit" onclick="editPlace('${d.id}', '${p.name}', ${p.lat}, ${p.lng})">تعديل ✏️</button>
+                    <button class="btn-action btn-del" onclick="deletePlace('${d.id}')">حذف 🗑️</button>
+                </div>
+            </div>`;
     });
-}
+};
+
+window.goTo = (lat, lng, name) => {
+    map.setView([lat, lng], 17);
+    L.marker([lat, lng]).addTo(map).bindPopup(name).openPopup();
+};
+
+window.openWaze = (lat, lng) => window.open(`https://waze.com/ul?ll=${lat},${lng}&navigate=yes`);
+
+window.editPlace = (id, name, lat, lng) => {
+    editingId = id;
+    document.getElementById('placeName').value = name;
+    document.getElementById('saveBtn').innerText = "✅ تحديث البيانات";
+    if(pickMarker) map.removeLayer(pickMarker);
+    pickMarker = L.marker([lat, lng], {draggable: true}).addTo(map);
+    map.setView([lat, lng], 16);
+};
+
+window.deletePlace = async (id) => {
+    if(confirm("حذف المكان؟")) {
+        await deleteDoc(doc(db, "places", id));
+        loadPlaces();
+    }
+};
 
 window.logout = () => location.reload();
 </script>
