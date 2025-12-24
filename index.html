@@ -52,85 +52,98 @@ li{background:#f2f2f2;margin:8px 0;padding:10px;border-radius:10px}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore,collection,getDocs,addDoc,deleteDoc,doc,updateDoc
+  getFirestore, collection, getDocs, addDoc, deleteDoc, doc, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const firebaseConfig={
- apiKey:"AIzaSyA_3TFx5dUR3JbcXj5jFIZ_mpjWeco7FVo",
- authDomain:"tktkbaghdad.firebaseapp.com",
- projectId:"tktkbaghdad",
- storageBucket:"tktkbaghdad.firebasestorage.app",
- messagingSenderId:"939931176033",
- appId:"1:939931176033:web:3b41b27dade80cca326e20"
+const firebaseConfig = {
+ apiKey: "AIzaSyA_3TFx5dUR3JbcXj5jFIZ_mpjWeco7FVo",
+ authDomain: "tktkbaghdad.firebaseapp.com",
+ projectId: "tktkbaghdad",
+ storageBucket: "tktkbaghdad.firebasestorage.app",
+ messagingSenderId: "939931176033",
+ appId: "1:939931176033:web:3b41b27dade80cca326e20"
 };
 
-const app=initializeApp(firebaseConfig);
-const db=getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-let places=[];
-let map=L.map("map").setView([33.3152,44.3661],12);
+let places = [];
+let map = L.map("map").setView([33.3152, 44.3661], 12);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-let pickMarker=null,editingId=null,myMarker=null;
+let pickMarker = null, editingId = null, myMarker = null;
 
-map.on("click",e=>{
- if(pickMarker)map.removeLayer(pickMarker);
- pickMarker=L.marker(e.latlng,{draggable:true}).addTo(map);
+// التقاط الإحداثيات عند الضغط على الخريطة
+map.on("click", e => {
+ if (pickMarker) map.removeLayer(pickMarker);
+ pickMarker = L.marker(e.latlng, { draggable: true }).addTo(map);
 });
 
-/* ✅ تحديد الموقع بالطريقة الصحيحة */
+// التعامل مع نجاح تحديد الموقع
 map.on("locationfound", e => {
- if(myMarker) map.removeLayer(myMarker);
+ if (myMarker) map.removeLayer(myMarker);
  myMarker = L.marker(e.latlng).addTo(map)
    .bindPopup("📍 موقعك الحالي").openPopup();
+ map.setView(e.latlng, 16);
 });
 
 map.on("locationerror", () => {
- alert("❌ لم يتمكن المتصفح من تحديد موقعك\nتأكد من السماح بالموقع وتشغيل GPS");
+ alert("❌ فشل تحديد الموقع. تأكد من تفعيل GPS ومنح المتصفح صلاحية الوصول للموقع.");
 });
 
-function locateMe(){
+// تعريف الدوال كخصائص لـ window لتتمكن أزرار HTML من الوصول إليها
+window.locateMe = function() {
  map.locate({
-  setView:true,
-  maxZoom:16,
-  enableHighAccuracy:true,
-  timeout:10000
+  setView: true,
+  maxZoom: 16,
+  enableHighAccuracy: true,
+  timeout: 10000
  });
-}
+};
 
-async function loadPlaces(){
- places=[];
- const snap=await getDocs(collection(db,"places"));
- snap.forEach(d=>places.push({id:d.id,...d.data()}));
- renderPlaces();
-}
-
-async function savePlace(){
- if(!pickMarker || !placeName.value.trim()){
-  alert("حدد الموقع واكتب الاسم");return;
+window.savePlace = async function() {
+ const nameInput = document.getElementById("placeName");
+ if (!pickMarker || !nameInput.value.trim()) {
+  alert("حدد الموقع على الخريطة أولاً واكتب الاسم"); 
+  return;
  }
- const {lat,lng}=pickMarker.getLatLng();
+ const { lat, lng } = pickMarker.getLatLng();
 
- if(editingId){
-  await updateDoc(doc(db,"places",editingId),
-   {name:placeName.value,lat,lng});
-  editingId=null;
- }else{
-  await addDoc(collection(db,"places"),
-   {name:placeName.value,lat,lng,created:Date.now()});
+ try {
+  if (editingId) {
+   await updateDoc(doc(db, "places", editingId), { name: nameInput.value, lat, lng });
+   editingId = null;
+  } else {
+   await addDoc(collection(db, "places"), { name: nameInput.value, lat, lng, created: Date.now() });
+  }
+  nameInput.value = "";
+  if (pickMarker) map.removeLayer(pickMarker);
+  pickMarker = null;
+  loadPlaces();
+ } catch (e) {
+  console.error("Error saving: ", e);
  }
+};
 
- placeName.value="";
- map.removeLayer(pickMarker);pickMarker=null;
- loadPlaces();
+async function loadPlaces() {
+ try {
+  places = [];
+  const snap = await getDocs(collection(db, "places"));
+  snap.forEach(d => places.push({ id: d.id, ...d.data() }));
+  renderPlaces();
+ } catch (e) {
+  console.error("Error loading: ", e);
+ }
 }
 
-function renderPlaces(){
- placesList.innerHTML="";
- const q=searchBox.value.toLowerCase();
- places.filter(p=>p.name.toLowerCase().includes(q)).forEach(p=>{
-  placesList.innerHTML+=`
-  <li>
+window.renderPlaces = function() {
+ const list = document.getElementById("placesList");
+ const search = document.getElementById("searchBox").value.toLowerCase();
+ list.innerHTML = "";
+ 
+ places.filter(p => p.name.toLowerCase().includes(search)).forEach(p => {
+  const li = document.createElement("li");
+  li.innerHTML = `
    <div class="liTop">
     <div>
      <div class="name">${p.name}</div>
@@ -142,35 +155,36 @@ function renderPlaces(){
      <button class="ok" onclick="editPlace('${p.id}')">✏️</button>
      <button class="danger" onclick="deletePlace('${p.id}')">🗑️</button>
     </div>
-   </div>
-  </li>`;
+   </div>`;
+  list.appendChild(li);
  });
-}
+};
 
-function goTo(lat,lng,name){
- map.setView([lat,lng],17);
- L.marker([lat,lng]).addTo(map).bindPopup(name).openPopup();
-}
+window.goTo = function(lat, lng, name) {
+ map.setView([lat, lng], 17);
+ L.marker([lat, lng]).addTo(map).bindPopup(name).openPopup();
+};
 
-function openWaze(lat,lng){
+window.openWaze = function(lat, lng) {
  window.open(`https://waze.com/ul?ll=${lat},${lng}&navigate=yes`);
-}
+};
 
-function editPlace(id){
- const p=places.find(x=>x.id===id);
- editingId=id;
- placeName.value=p.name;
- if(pickMarker)map.removeLayer(pickMarker);
- pickMarker=L.marker([p.lat,p.lng],{draggable:true}).addTo(map);
- map.setView([p.lat,p.lng],16);
-}
+window.editPlace = function(id) {
+ const p = places.find(x => x.id === id);
+ editingId = id;
+ document.getElementById("placeName").value = p.name;
+ if (pickMarker) map.removeLayer(pickMarker);
+ pickMarker = L.marker([p.lat, p.lng], { draggable: true }).addTo(map);
+ map.setView([p.lat, p.lng], 16);
+};
 
-async function deletePlace(id){
- if(!confirm("حذف المكان؟"))return;
- await deleteDoc(doc(db,"places",id));
+window.deletePlace = async function(id) {
+ if (!confirm("هل أنت متأكد من حذف هذا المكان؟")) return;
+ await deleteDoc(doc(db, "places", id));
  loadPlaces();
-}
+};
 
+// تحميل البيانات عند تشغيل الصفحة
 loadPlaces();
 </script>
 
