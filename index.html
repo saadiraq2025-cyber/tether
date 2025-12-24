@@ -8,23 +8,23 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
-  body{margin:0;font-family:Arial,sans-serif;background:#f4f4f4}
-  #map{height:62vh}
-  .panel{padding:10px;background:#fff}
-  .row{display:flex;gap:8px;flex-wrap:wrap}
-  .row > *{flex:1}
-  input,button{padding:10px;font-size:14px;border:1px solid #ddd;border-radius:8px}
-  button{cursor:pointer;background:#111;color:#fff;border:none}
-  button.secondary{background:#4a4a4a}
-  button.danger{background:#b00020}
-  button.ok{background:#0b6}
-  button.waze{background:#33ccff;color:#003}
-  ul{list-style:none;padding:0;margin:10px 0 0}
-  li{background:#f2f2f2;margin:8px 0;padding:10px;border-radius:10px}
-  .liTop{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
-  .name{font-weight:bold}
-  .coords{font-size:12px;color:#555;direction:ltr}
-  .actions{display:flex;gap:6px;flex-wrap:wrap}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f4f4}
+#map{height:62vh}
+.panel{padding:10px;background:#fff}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row>*{flex:1}
+input,button{padding:10px;font-size:14px;border:1px solid #ddd;border-radius:8px}
+button{cursor:pointer;background:#111;color:#fff;border:none}
+button.secondary{background:#4a4a4a}
+button.danger{background:#b00020}
+button.ok{background:#0b6}
+button.waze{background:#33ccff;color:#003}
+ul{list-style:none;padding:0;margin:10px 0 0}
+li{background:#f2f2f2;margin:8px 0;padding:10px;border-radius:10px}
+.liTop{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.name{font-weight:bold}
+.coords{font-size:12px;color:#555;direction:ltr}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
 </style>
 </head>
 
@@ -33,14 +33,13 @@
 <div id="map"></div>
 
 <div class="panel">
-
   <div class="row">
-    <input id="placeName" type="text" placeholder="اسم المحلة أو المكان" />
+    <input id="placeName" placeholder="اسم المحلة أو المكان">
     <button class="ok" onclick="savePlace()">💾 حفظ</button>
   </div>
 
   <div class="row" style="margin-top:8px">
-    <input id="searchBox" type="text" placeholder="🔍 بحث..." oninput="renderPlaces()" />
+    <input id="searchBox" placeholder="🔍 بحث..." oninput="renderPlaces()">
     <button class="secondary" onclick="locateMe()">📍 موقعي</button>
   </div>
 
@@ -50,141 +49,124 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-<!-- Firebase -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  getDocs,
-  addDoc,
-  deleteDoc,
-  doc,
-  updateDoc
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore,collection,getDocs,addDoc,deleteDoc,doc,updateDoc }
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyA_3TFx5dUR3JbcXj5jFIZ_mpjWeco7FVo",
-  authDomain: "tktkbaghdad.firebaseapp.com",
-  projectId: "tktkbaghdad",
-  storageBucket: "tktkbaghdad.firebasestorage.app",
-  messagingSenderId: "939931176033",
-  appId: "1:939931176033:web:3b41b27dade80cca326e20"
+const firebaseConfig={
+ apiKey:"AIzaSyA_3TFx5dUR3JbcXj5jFIZ_mpjWeco7FVo",
+ authDomain:"tktkbaghdad.firebaseapp.com",
+ projectId:"tktkbaghdad",
+ storageBucket:"tktkbaghdad.firebasestorage.app",
+ messagingSenderId:"939931176033",
+ appId:"1:939931176033:web:3b41b27dade80cca326e20"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
 
-let places = [];
+let places=[];
+let map=L.map("map").setView([33.3152,44.3661],12);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-let map = L.map('map').setView([33.3152, 44.3661], 12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap'
-}).addTo(map);
+let pickMarker=null,editingId=null,myMarker=null;
 
-let pickMarker = null;
-let editingId = null;
-let myMarker = null;
-
-map.on('click', (e) => setPickMarker(e.latlng));
-
-function setPickMarker(latlng){
-  if(pickMarker) map.removeLayer(pickMarker);
-  pickMarker = L.marker(latlng,{draggable:true}).addTo(map);
-}
+map.on("click",e=>{
+ if(pickMarker)map.removeLayer(pickMarker);
+ pickMarker=L.marker(e.latlng,{draggable:true}).addTo(map);
+});
 
 async function loadPlaces(){
-  places = [];
-  const snapshot = await getDocs(collection(db,"places"));
-  snapshot.forEach(d=>{
-    places.push({id:d.id,...d.data()});
-  });
-  renderPlaces();
+ places=[];
+ const snap=await getDocs(collection(db,"places"));
+ snap.forEach(d=>places.push({id:d.id,...d.data()}));
+ renderPlaces();
 }
 
 async function savePlace(){
-  const name = document.getElementById("placeName").value.trim();
-  if(!pickMarker) return alert("حدد موقعاً على الخريطة");
-  if(!name) return alert("اكتب اسم المكان");
+ const name=placeName.value.trim();
+ if(!pickMarker||!name)return alert("حدد الموقع واكتب الاسم");
+ const {lat,lng}=pickMarker.getLatLng();
 
-  const latlng = pickMarker.getLatLng();
+ if(editingId){
+  await updateDoc(doc(db,"places",editingId),{name,lat,lng});
+  editingId=null;
+ }else{
+  await addDoc(collection(db,"places"),{name,lat,lng,created:Date.now()});
+ }
 
-  if(editingId){
-    await updateDoc(doc(db,"places",editingId),{
-      name,
-      lat:latlng.lat,
-      lng:latlng.lng
-    });
-    editingId=null;
-  }else{
-    await addDoc(collection(db,"places"),{
-      name,
-      lat:latlng.lat,
-      lng:latlng.lng,
-      created:Date.now()
-    });
-  }
-
-  document.getElementById("placeName").value="";
-  map.removeLayer(pickMarker);
-  pickMarker=null;
-  loadPlaces();
+ placeName.value="";
+ map.removeLayer(pickMarker);pickMarker=null;
+ loadPlaces();
 }
 
 function renderPlaces(){
-  const q=document.getElementById("searchBox").value.toLowerCase();
-  const list=document.getElementById("placesList");
-  list.innerHTML="";
-  places.filter(p=>p.name.toLowerCase().includes(q)).forEach(p=>{
-    const li=document.createElement("li");
-    li.innerHTML=`
-      <div class="liTop">
-        <div>
-          <div class="name">${p.name}</div>
-          <div class="coords">${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</div>
-        </div>
-        <div class="actions">
-          <button class="secondary" onclick="goTo(${p.lat},${p.lng},'${p.name}')">📍 عرض</button>
-          <button class="waze" onclick="openWaze(${p.lat},${p.lng})">🚗 Waze</button>
-          <button class="ok" onclick="editPlace('${p.id}')">✏️</button>
-          <button class="danger" onclick="deletePlace('${p.id}')">🗑️</button>
-        </div>
-      </div>`;
-    list.appendChild(li);
-  });
+ const q=searchBox.value.toLowerCase();
+ placesList.innerHTML="";
+ places.filter(p=>p.name.toLowerCase().includes(q)).forEach(p=>{
+  placesList.innerHTML+=`
+  <li>
+   <div class="liTop">
+    <div>
+     <div class="name">${p.name}</div>
+     <div class="coords">${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</div>
+    </div>
+    <div class="actions">
+     <button class="secondary" onclick="goTo(${p.lat},${p.lng},'${p.name}')">📍</button>
+     <button class="waze" onclick="openWaze(${p.lat},${p.lng})">🚗</button>
+     <button class="ok" onclick="editPlace('${p.id}')">✏️</button>
+     <button class="danger" onclick="deletePlace('${p.id}')">🗑️</button>
+    </div>
+   </div>
+  </li>`;
+ });
 }
 
 function goTo(lat,lng,name){
-  map.setView([lat,lng],17);
-  L.marker([lat,lng]).addTo(map).bindPopup(name).openPopup();
+ map.setView([lat,lng],17);
+ L.marker([lat,lng]).addTo(map).bindPopup(name).openPopup();
 }
 
 function openWaze(lat,lng){
-  window.open(`https://waze.com/ul?ll=${lat},${lng}&navigate=yes`,"_blank");
+ window.open(`https://waze.com/ul?ll=${lat},${lng}&navigate=yes`);
 }
 
 function editPlace(id){
-  const p=places.find(x=>x.id===id);
-  editingId=id;
-  document.getElementById("placeName").value=p.name;
-  setPickMarker([p.lat,p.lng]);
-  map.setView([p.lat,p.lng],16);
+ const p=places.find(x=>x.id===id);
+ editingId=id;
+ placeName.value=p.name;
+ if(pickMarker)map.removeLayer(pickMarker);
+ pickMarker=L.marker([p.lat,p.lng],{draggable:true}).addTo(map);
+ map.setView([p.lat,p.lng],16);
 }
 
 async function deletePlace(id){
-  if(!confirm("حذف المكان؟")) return;
-  await deleteDoc(doc(db,"places",id));
-  loadPlaces();
+ if(!confirm("حذف المكان؟"))return;
+ await deleteDoc(doc(db,"places",id));
+ loadPlaces();
 }
 
+/* ✅ الموقع الحالي بعد الإصلاح */
 function locateMe(){
-  navigator.geolocation.getCurrentPosition(pos=>{
-    const {latitude,longitude}=pos.coords;
-    if(myMarker) map.removeLayer(myMarker);
-    myMarker=L.marker([latitude,longitude]).addTo(map)
-      .bindPopup("موقعي الحالي").openPopup();
-    map.setView([latitude,longitude],16);
-  });
+ if(location.protocol!=="https:" && location.hostname!=="localhost"){
+  alert("⚠️ الموقع الحالي يحتاج HTTPS");
+  return;
+ }
+
+ navigator.geolocation.getCurrentPosition(
+  pos=>{
+   const {latitude,longitude}=pos.coords;
+   if(myMarker)map.removeLayer(myMarker);
+   myMarker=L.marker([latitude,longitude]).addTo(map)
+    .bindPopup("📍 موقعك الحالي").openPopup();
+   map.setView([latitude,longitude],16);
+  },
+  err=>{
+   alert("❌ فشل تحديد الموقع: فعّل GPS واسمح بالصلاحية");
+  },
+  {enableHighAccuracy:true,timeout:10000}
+ );
 }
 
 loadPlaces();
