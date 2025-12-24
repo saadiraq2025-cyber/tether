@@ -3,57 +3,54 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>خريطة حفظ المحلات والأماكن</title>
-
+<title>نظام الخرائط والمشتركين</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-
 <style>
-body{margin:0;font-family:Arial,sans-serif;background:#f4f4f4}
-#map{height:62vh}
-.panel{padding:10px;background:#fff}
-.row{display:flex;gap:8px;flex-wrap:wrap}
-.row>*{flex:1}
-input,button{padding:10px;font-size:14px;border:1px solid #ddd;border-radius:8px}
-button{cursor:pointer;background:#111;color:#fff;border:none}
-button.secondary{background:#4a4a4a}
-button.danger{background:#b00020}
-button.ok{background:#0b6}
-button.waze{background:#33ccff;color:#003}
-ul{list-style:none;padding:0;margin:10px 0 0}
-li{background:#f2f2f2;margin:8px 0;padding:10px;border-radius:10px}
-.liTop{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
-.name{font-weight:bold}
-.coords{font-size:12px;color:#555;direction:ltr}
-.actions{display:flex;gap:6px;flex-wrap:wrap}
+:root{--primary:#0b6;--danger:#b00020;--dark:#111}
+body{margin:0;font-family:sans-serif;background:#f4f4f4;direction:rtl}
+#authContainer,#appContainer{display:none;padding:20px}
+.card{background:#fff;padding:20px;border-radius:15px;box-shadow:0 4px 10px rgba(0,0,0,0.1);max-width:400px;margin:50px auto}
+input,button{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #ddd;box-sizing:border-box}
+button{background:var(--dark);color:#fff;border:none;cursor:pointer;font-weight:bold}
+.status-bar{background:#eee;padding:10px;text-align:center;font-size:14px;border-radius:8px;margin-bottom:10px}
+#map{height:50vh;border-radius:15px;margin-bottom:10px}
+.active{display:block !important}
+.blocked{color:red;font-weight:bold;text-align:center}
 </style>
 </head>
-
 <body>
 
-<div id="map"></div>
+<div id="authContainer" class="active">
+    <div class="card">
+        <h2>تسجيل الدخول</h2>
+        <input type="text" id="loginPhone" placeholder="رقم الهاتف">
+        <input type="password" id="loginPass" placeholder="كلمة المرور">
+        <button onclick="login()">دخول</button>
+        <p id="loginError" style="color:red; font-size:12px"></p>
+    </div>
+</div>
 
-<div class="panel">
-  <div class="row">
-    <input id="placeName" placeholder="اسم المحلة أو المكان">
-    <button class="ok" onclick="savePlace()">💾 حفظ</button>
-  </div>
+<div id="appContainer">
+    <div class="status-bar">
+        المستخدم: <span id="userName">...</span> | 
+        الاشتراك: <span id="subStatus">...</span>
+        <button style="width:auto; padding:5px 10px; background:red" onclick="logout()">خروج</button>
+    </div>
+    
+    <div id="map"></div>
 
-  <div class="row" style="margin-top:8px">
-    <input id="searchBox" placeholder="🔍 بحث..." oninput="renderPlaces()">
-    <button class="secondary" onclick="locateMe()">📍 موقعي</button>
-  </div>
-
-  <h3>📌 الأماكن المحفوظة</h3>
-  <ul id="placesList"></ul>
+    <div class="panel">
+        <input id="placeName" placeholder="اسم المكان">
+        <button class="ok" style="background:var(--primary)" onclick="savePlace()">💾 حفظ المكان الحالي</button>
+        <button style="background:#4a4a4a" onclick="locateMe()">📍 موقعي الحالي</button>
+        <ul id="placesList" style="list-style:none; padding:0"></ul>
+    </div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore, collection, getDocs, addDoc, deleteDoc, doc, updateDoc
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, getDoc, getDocs, collection, addDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
  apiKey: "AIzaSyA_3TFx5dUR3JbcXj5jFIZ_mpjWeco7FVo",
@@ -67,126 +64,71 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-let places = [];
-let map = L.map("map").setView([33.3152, 44.3661], 12);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+let currentUser = null;
+let map, pickMarker;
 
-let pickMarker = null, editingId = null, myMarker = null;
+window.login = async () => {
+    const phone = document.getElementById('loginPhone').value;
+    const pass = document.getElementById('loginPass').value;
+    const userDoc = await getDoc(doc(db, "users", phone));
 
-// التقاط الإحداثيات عند الضغط على الخريطة
-map.on("click", e => {
- if (pickMarker) map.removeLayer(pickMarker);
- pickMarker = L.marker(e.latlng, { draggable: true }).addTo(map);
-});
-
-// التعامل مع نجاح تحديد الموقع
-map.on("locationfound", e => {
- if (myMarker) map.removeLayer(myMarker);
- myMarker = L.marker(e.latlng).addTo(map)
-   .bindPopup("📍 موقعك الحالي").openPopup();
- map.setView(e.latlng, 16);
-});
-
-map.on("locationerror", () => {
- alert("❌ فشل تحديد الموقع. تأكد من تفعيل GPS ومنح المتصفح صلاحية الوصول للموقع.");
-});
-
-// تعريف الدوال كخصائص لـ window لتتمكن أزرار HTML من الوصول إليها
-window.locateMe = function() {
- map.locate({
-  setView: true,
-  maxZoom: 16,
-  enableHighAccuracy: true,
-  timeout: 10000
- });
+    if(userDoc.exists() && userDoc.data().password === pass) {
+        const data = userDoc.data();
+        if(data.isBlocked) return alert("عذراً، هذا الحساب محظور");
+        if(data.expiry < Date.now()) return alert("انتهى اشتراكك، يرجى التجديد");
+        
+        currentUser = {id: phone, ...data};
+        showApp();
+    } else {
+        alert("خطأ في البيانات");
+    }
 };
 
-window.savePlace = async function() {
- const nameInput = document.getElementById("placeName");
- if (!pickMarker || !nameInput.value.trim()) {
-  alert("حدد الموقع على الخريطة أولاً واكتب الاسم"); 
-  return;
- }
- const { lat, lng } = pickMarker.getLatLng();
+function showApp() {
+    document.getElementById('authContainer').classList.remove('active');
+    document.getElementById('appContainer').classList.add('active');
+    document.getElementById('userName').innerText = currentUser.id;
+    document.getElementById('subStatus').innerText = new Date(currentUser.expiry).toLocaleDateString();
+    initMap();
+    loadPlaces();
+}
 
- try {
-  if (editingId) {
-   await updateDoc(doc(db, "places", editingId), { name: nameInput.value, lat, lng });
-   editingId = null;
-  } else {
-   await addDoc(collection(db, "places"), { name: nameInput.value, lat, lng, created: Date.now() });
-  }
-  nameInput.value = "";
-  if (pickMarker) map.removeLayer(pickMarker);
-  pickMarker = null;
-  loadPlaces();
- } catch (e) {
-  console.error("Error saving: ", e);
- }
+function initMap() {
+    map = L.map("map").setView([33.3152, 44.3661], 12);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+    map.on("click", e => {
+        if(pickMarker) map.removeLayer(pickMarker);
+        pickMarker = L.marker(e.latlng).addTo(map);
+    });
+}
+
+window.locateMe = () => {
+    map.locate({setView: true, maxZoom: 16});
+};
+
+window.savePlace = async () => {
+    const name = document.getElementById('placeName').value;
+    if(!pickMarker || !name) return alert("حدد موقعاً واسماً");
+    const {lat, lng} = pickMarker.getLatLng();
+    await addDoc(collection(db, "places"), {
+        name, lat, lng, userId: currentUser.id
+    });
+    alert("تم الحفظ");
+    loadPlaces();
 };
 
 async function loadPlaces() {
- try {
-  places = [];
-  const snap = await getDocs(collection(db, "places"));
-  snap.forEach(d => places.push({ id: d.id, ...d.data() }));
-  renderPlaces();
- } catch (e) {
-  console.error("Error loading: ", e);
- }
+    const q = query(collection(db, "places"), where("userId", "==", currentUser.id));
+    const snap = await getDocs(q);
+    const list = document.getElementById('placesList');
+    list.innerHTML = "";
+    snap.forEach(d => {
+        list.innerHTML += `<li style="background:#fff; margin:5px; padding:10px; border-radius:8px">📍 ${d.data().name}</li>`;
+    });
 }
 
-window.renderPlaces = function() {
- const list = document.getElementById("placesList");
- const search = document.getElementById("searchBox").value.toLowerCase();
- list.innerHTML = "";
- 
- places.filter(p => p.name.toLowerCase().includes(search)).forEach(p => {
-  const li = document.createElement("li");
-  li.innerHTML = `
-   <div class="liTop">
-    <div>
-     <div class="name">${p.name}</div>
-     <div class="coords">${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</div>
-    </div>
-    <div class="actions">
-     <button class="secondary" onclick="goTo(${p.lat},${p.lng},'${p.name}')">📍</button>
-     <button class="waze" onclick="openWaze(${p.lat},${p.lng})">🚗</button>
-     <button class="ok" onclick="editPlace('${p.id}')">✏️</button>
-     <button class="danger" onclick="deletePlace('${p.id}')">🗑️</button>
-    </div>
-   </div>`;
-  list.appendChild(li);
- });
-};
+window.logout = () => location.reload();
 
-window.goTo = function(lat, lng, name) {
- map.setView([lat, lng], 17);
- L.marker([lat, lng]).addTo(map).bindPopup(name).openPopup();
-};
-
-window.openWaze = function(lat, lng) {
- window.open(`https://waze.com/ul?ll=${lat},${lng}&navigate=yes`);
-};
-
-window.editPlace = function(id) {
- const p = places.find(x => x.id === id);
- editingId = id;
- document.getElementById("placeName").value = p.name;
- if (pickMarker) map.removeLayer(pickMarker);
- pickMarker = L.marker([p.lat, p.lng], { draggable: true }).addTo(map);
- map.setView([p.lat, p.lng], 16);
-};
-
-window.deletePlace = async function(id) {
- if (!confirm("هل أنت متأكد من حذف هذا المكان؟")) return;
- await deleteDoc(doc(db, "places", id));
- loadPlaces();
-};
-
-// تحميل البيانات عند تشغيل الصفحة
-loadPlaces();
 </script>
-
 </body>
 </html>
