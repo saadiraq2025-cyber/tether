@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>نظام الخرائط والمشتركين</title>
+<title>نظام الخرائط - تسجيل ذاتي</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
 :root{--primary:#0b6;--danger:#b00020;--dark:#111}
@@ -12,37 +12,45 @@ body{margin:0;font-family:sans-serif;background:#f4f4f4;direction:rtl}
 .card{background:#fff;padding:20px;border-radius:15px;box-shadow:0 4px 10px rgba(0,0,0,0.1);max-width:400px;margin:50px auto}
 input,button{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #ddd;box-sizing:border-box}
 button{background:var(--dark);color:#fff;border:none;cursor:pointer;font-weight:bold}
-.status-bar{background:#eee;padding:10px;text-align:center;font-size:14px;border-radius:8px;margin-bottom:10px}
+.status-bar{background:#eee;padding:10px;text-align:center;font-size:14px;border-radius:8px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
 #map{height:50vh;border-radius:15px;margin-bottom:10px}
 .active{display:block !important}
-.blocked{color:red;font-weight:bold;text-align:center}
+.link-btn{background:none;color:#0b6;text-decoration:underline;font-size:13px;border:none;cursor:pointer;width:auto}
 </style>
 </head>
 <body>
 
 <div id="authContainer" class="active">
-    <div class="card">
+    <div class="card" id="loginBox">
         <h2>تسجيل الدخول</h2>
         <input type="text" id="loginPhone" placeholder="رقم الهاتف">
         <input type="password" id="loginPass" placeholder="كلمة المرور">
         <button onclick="login()">دخول</button>
-        <p id="loginError" style="color:red; font-size:12px"></p>
+        <button class="link-btn" onclick="toggleAuth(false)">ليس لديك حساب؟ سجل الآن</button>
+    </div>
+
+    <div class="card" id="registerBox" style="display:none">
+        <h2>إنشاء حساب جديد</h2>
+        <input type="text" id="regPhone" placeholder="رقم الهاتف">
+        <input type="password" id="regPass" placeholder="كلمة المرور">
+        <button style="background:var(--primary)" onclick="register()">إنشاء الحساب</button>
+        <button class="link-btn" onclick="toggleAuth(true)">لديك حساب؟ سجل دخول</button>
     </div>
 </div>
 
 <div id="appContainer">
     <div class="status-bar">
-        المستخدم: <span id="userName">...</span> | 
-        الاشتراك: <span id="subStatus">...</span>
+        <span>👤 <span id="userName">...</span></span>
+        <span>📅 انتهاء: <span id="subStatus">...</span></span>
         <button style="width:auto; padding:5px 10px; background:red" onclick="logout()">خروج</button>
     </div>
     
     <div id="map"></div>
 
     <div class="panel">
-        <input id="placeName" placeholder="اسم المكان">
-        <button class="ok" style="background:var(--primary)" onclick="savePlace()">💾 حفظ المكان الحالي</button>
-        <button style="background:#4a4a4a" onclick="locateMe()">📍 موقعي الحالي</button>
+        <input id="placeName" placeholder="اسم المكان المراد حفظه">
+        <button style="background:var(--primary)" onclick="savePlace()">💾 حفظ الموقع الحالي</button>
+        <button style="background:#4a4a4a" onclick="locateMe()">📍 تحديث موقعي</button>
         <ul id="placesList" style="list-style:none; padding:0"></ul>
     </div>
 </div>
@@ -50,7 +58,7 @@ button{background:var(--dark);color:#fff;border:none;cursor:pointer;font-weight:
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, getDoc, getDocs, collection, addDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, getDocs, collection, addDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
  apiKey: "AIzaSyA_3TFx5dUR3JbcXj5jFIZ_mpjWeco7FVo",
@@ -67,20 +75,49 @@ const db = getFirestore(app);
 let currentUser = null;
 let map, pickMarker;
 
+// تبديل بين التسجيل والدخول
+window.toggleAuth = (isLogin) => {
+    document.getElementById('loginBox').style.display = isLogin ? 'block' : 'none';
+    document.getElementById('registerBox').style.display = isLogin ? 'none' : 'block';
+};
+
+// إنشاء حساب جديد
+window.register = async () => {
+    const phone = document.getElementById('regPhone').value.trim();
+    const pass = document.getElementById('regPass').value.trim();
+    
+    if(!phone || !pass) return alert("يرجى ملء البيانات");
+    
+    const userRef = doc(db, "users", phone);
+    const check = await getDoc(userRef);
+    if(check.exists()) return alert("هذا الرقم مسجل مسبقاً");
+
+    // إنشاء الحساب مع فترة تجريبية 5 دقائق للاختبار
+    await setDoc(userRef, {
+        password: pass,
+        isBlocked: false,
+        expiry: Date.now() + (5 * 60 * 1000), 
+        created: Date.now()
+    });
+    
+    alert("تم إنشاء الحساب بنجاح! يمكنك الدخول الآن.");
+    toggleAuth(true);
+};
+
 window.login = async () => {
-    const phone = document.getElementById('loginPhone').value;
-    const pass = document.getElementById('loginPass').value;
+    const phone = document.getElementById('loginPhone').value.trim();
+    const pass = document.getElementById('loginPass').value.trim();
     const userDoc = await getDoc(doc(db, "users", phone));
 
     if(userDoc.exists() && userDoc.data().password === pass) {
         const data = userDoc.data();
-        if(data.isBlocked) return alert("عذراً، هذا الحساب محظور");
-        if(data.expiry < Date.now()) return alert("انتهى اشتراكك، يرجى التجديد");
+        if(data.isBlocked) return alert("هذا الحساب محظور من قبل الإدارة");
+        if(data.expiry < Date.now()) return alert("انتهى اشتراكك، تواصل مع الإدارة للتجديد");
         
         currentUser = {id: phone, ...data};
         showApp();
     } else {
-        alert("خطأ في البيانات");
+        alert("خطأ في رقم الهاتف أو كلمة المرور");
     }
 };
 
@@ -88,12 +125,13 @@ function showApp() {
     document.getElementById('authContainer').classList.remove('active');
     document.getElementById('appContainer').classList.add('active');
     document.getElementById('userName').innerText = currentUser.id;
-    document.getElementById('subStatus').innerText = new Date(currentUser.expiry).toLocaleDateString();
+    document.getElementById('subStatus').innerText = new Date(currentUser.expiry).toLocaleString('ar-EG');
     initMap();
     loadPlaces();
 }
 
 function initMap() {
+    if(map) return;
     map = L.map("map").setView([33.3152, 44.3661], 12);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
     map.on("click", e => {
@@ -108,12 +146,13 @@ window.locateMe = () => {
 
 window.savePlace = async () => {
     const name = document.getElementById('placeName').value;
-    if(!pickMarker || !name) return alert("حدد موقعاً واسماً");
+    if(!pickMarker || !name) return alert("حدد موقعاً على الخريطة أولاً واكتب الاسم");
     const {lat, lng} = pickMarker.getLatLng();
     await addDoc(collection(db, "places"), {
         name, lat, lng, userId: currentUser.id
     });
-    alert("تم الحفظ");
+    document.getElementById('placeName').value = "";
+    alert("تم حفظ المكان");
     loadPlaces();
 };
 
@@ -123,12 +162,11 @@ async function loadPlaces() {
     const list = document.getElementById('placesList');
     list.innerHTML = "";
     snap.forEach(d => {
-        list.innerHTML += `<li style="background:#fff; margin:5px; padding:10px; border-radius:8px">📍 ${d.data().name}</li>`;
+        list.innerHTML += `<li style="background:#fff; margin:8px 0; padding:12px; border-radius:10px; border-right:4px solid var(--primary)">📍 ${d.data().name}</li>`;
     });
 }
 
 window.logout = () => location.reload();
-
 </script>
 </body>
 </html>
