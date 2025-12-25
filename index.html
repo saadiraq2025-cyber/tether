@@ -6,7 +6,7 @@
 <title>نظام الخرائط المتطور</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
-:root{--primary:#0b6;--danger:#b00020;--waze:#33ccff;--dark:#111}
+:root{--primary:#0b6;--danger:#b00020;--waze:#33ccff;--dark:#111;--whatsapp:#25D366}
 body{margin:0;font-family:sans-serif;background:#f4f4f4;direction:rtl}
 #authContainer,#appContainer{display:none;padding:15px}
 .card{background:#fff;padding:20px;border-radius:15px;box-shadow:0 4px 10px rgba(0,0,0,0.1);max-width:400px;margin:30px auto}
@@ -16,6 +16,27 @@ button{background:var(--dark);color:#fff;border:none;cursor:pointer;font-weight:
 #map{height:45vh;border-radius:15px;margin-bottom:10px;z-index:1}
 .active{display:block !important}
 .link-btn{background:none;color:#555;text-decoration:underline;font-size:12px;border:none;cursor:pointer;width:auto;margin:5px}
+
+/* تحسين زر إنشاء حساب */
+.btn-large-link {
+    font-size: 18px !important;
+    font-weight: bold !important;
+    color: var(--primary) !important;
+}
+
+/* زر الواتساب */
+.btn-whatsapp {
+    background: var(--whatsapp);
+    color: white;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 15px;
+    font-weight: bold;
+}
 
 /* تنسيق قائمة الأماكن */
 .place-item{background:#fff; margin:10px 0; padding:12px; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.05); border-right:5px solid var(--primary)}
@@ -37,9 +58,11 @@ button{background:var(--dark);color:#fff;border:none;cursor:pointer;font-weight:
         <input type="password" id="loginPass" placeholder="كلمة المرور">
         <button onclick="login()">دخول</button>
         <div style="text-align:center">
-            <button class="link-btn" onclick="forgotPass()">نسيت كلمة السر؟</button>
-            <button class="link-btn" onclick="toggleAuth(false)">إنشاء حساب جديد</button>
+            <button class="link-btn btn-large-link" onclick="toggleAuth(false)">إنشاء حساب جديد</button>
         </div>
+        <a href="https://wa.me/9647816175944" class="btn-whatsapp" target="_blank">
+            💬 الدعم الفني (واتساب)
+        </a>
     </div>
 
     <div class="card" id="registerBox" style="display:none">
@@ -110,18 +133,14 @@ window.register = async () => {
 window.login = async () => {
     const phone = document.getElementById('loginPhone').value.trim();
     const pass = document.getElementById('loginPass').value.trim();
+    if(!phone || !pass) return alert("أدخل البيانات");
     const userDoc = await getDoc(doc(db, "users", phone));
     if(userDoc.exists() && userDoc.data().password === pass) {
         if(userDoc.data().isBlocked) return alert("الحساب محظور");
-        if(userDoc.data().expiry < Date.now()) return alert("انتهى الاشتراك");
+        if(userDoc.data().expiry < Date.now()) return alert("انتهى اشتراكك، يرجى التواصل مع الإدارة");
         currentUser = {id: phone, ...userDoc.data()};
         showApp();
-    } else alert("بيانات خاطئة");
-};
-
-window.forgotPass = () => {
-    const p = prompt("أدخل رقم هاتفك المسجل:");
-    if(p) alert("يرجى التواصل مع الإدارة على الواتساب لإعادة تعيين كلمة السر للرقم: " + p);
+    } else alert("رقم الهاتف أو كلمة المرور غير صحيحة");
 };
 
 // --- إدارة الخريطة والأماكن ---
@@ -147,7 +166,7 @@ window.locateMe = () => map.locate({setView: true, maxZoom: 16});
 
 window.savePlace = async () => {
     const name = document.getElementById('placeName').value;
-    if(!pickMarker || !name) return alert("حدد موقعاً واسماً");
+    if(!pickMarker || !name) return alert("حدد موقعاً على الخريطة أولاً واكتب اسماً له");
     const {lat, lng} = pickMarker.getLatLng();
 
     if(editingId) {
@@ -203,7 +222,7 @@ window.editPlace = (id, name, lat, lng) => {
 };
 
 window.deletePlace = async (id) => {
-    if(confirm("حذف المكان؟")) {
+    if(confirm("هل أنت متأكد من حذف هذا المكان؟")) {
         await deleteDoc(doc(db, "places", id));
         loadPlaces();
     }
