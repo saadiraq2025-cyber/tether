@@ -12,12 +12,32 @@
     .btn-sub{background:#0b6; color:#fff}
     .btn-block{background:#f39c12; color:#fff}
     .btn-del{background:#e74c3c; color:#fff}
-    input{padding:8px; border-radius:5px; border:none}
+    input{padding:8px; border-radius:5px; border:none; margin-bottom: 5px;}
     .add-user{background:#444; padding:20px; border-radius:10px; margin-bottom:30px}
+    
+    /* ستايل صفحة تسجيل الدخول */
+    #loginOverlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: #111; display: flex; justify-content: center; align-items: center;
+        z-index: 1000; flex-direction: column;
+    }
+    .login-box { background: #333; padding: 30px; border-radius: 10px; text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+    #adminContent { display: none; } /* إخفاء المحتوى افتراضياً */
 </style>
 </head>
 <body>
-<div class="container">
+
+<div id="loginOverlay">
+    <div class="login-box">
+        <h2>تسجيل دخول الإدارة</h2>
+        <input type="password" id="adminPassInput" placeholder="أدخل كلمة المرور">
+        <br><br>
+        <button class="btn-sub" onclick="checkLogin()">دخول</button>
+        <p id="errorMsg" style="color: #e74c3c; margin-top: 10px; display: none;">كلمة المرور خاطئة!</p>
+    </div>
+</div>
+
+<div id="adminContent" class="container">
     <h1>مدير المستخدمين والاشتراكات</h1>
 
     <div class="add-user">
@@ -46,6 +66,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// دالة التحقق من كلمة المرور
+window.checkLogin = () => {
+    const enteredPass = document.getElementById('adminPassInput').value;
+    const correctPass = "12312344@"; // كلمة المرور المطلوبة
+
+    if (enteredPass === correctPass) {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('adminContent').style.display = 'block';
+        loadUsers(); // تحميل البيانات بعد النجاح
+    } else {
+        document.getElementById('errorMsg').style.display = 'block';
+    }
+};
+
 // إضافة مستخدم
 window.addUser = async () => {
     const phone = document.getElementById('newPhone').value;
@@ -55,7 +89,7 @@ window.addUser = async () => {
     await setDoc(doc(db, "users", phone), {
         password: pass,
         isBlocked: false,
-        expiry: Date.now() + (24*60*60*1000) // يوم تجريبي تلقائي
+        expiry: Date.now() + (24*60*60*1000)
     });
     alert("تمت الإضافة");
     loadUsers();
@@ -109,7 +143,7 @@ async function loadUsers() {
                 <span style="color:${d.isBlocked?'red':'#0b6'}">${d.isBlocked?'محظور':'نشط'}</span>
                 
                 <div class="controls">
-                    <button class="btn-sub" onclick="extendSub('${u.id}', 1)">+ دقيقة (يوم)</button>
+                    <button class="btn-sub" onclick="extendSub('${u.id}', 1)">+ يوم</button>
                     <button class="btn-sub" onclick="extendSub('${u.id}', 30)">+ شهر</button>
                     <button class="btn-sub" onclick="extendSub('${u.id}', 365)">+ سنة</button>
                     <button class="btn-block" onclick="updatePass('${u.id}')">🔑 كلمة السر</button>
@@ -120,8 +154,6 @@ async function loadUsers() {
         `;
     });
 }
-
-loadUsers();
 </script>
 </body>
 </html>
