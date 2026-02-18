@@ -2,14 +2,14 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>اللعبة الدينية للأطفال</title>
+<title>اللعبة الدينية الاحترافية</title>
 
 <style>
 body{
 font-family:Arial;
-background:linear-gradient(#89f7fe,#ffffff);
+background:linear-gradient(#6dd5fa,#ffffff);
 text-align:center;
-padding:15px;
+padding:10px;
 }
 
 .card{
@@ -24,7 +24,7 @@ box-shadow:0 0 15px rgba(0,0,0,0.2);
 button{
 width:100%;
 padding:14px;
-margin:8px 0;
+margin:6px 0;
 font-size:16px;
 border:none;
 border-radius:12px;
@@ -33,15 +33,9 @@ background:#4CAF50;
 color:white;
 }
 
+.avatar{font-size:60px}
+
 #timer{font-size:22px;color:red}
-#score{font-size:18px}
-
-.avatar{
-font-size:60px;
-margin:10px;
-}
-
-.hidden{display:none}
 </style>
 </head>
 
@@ -49,11 +43,9 @@ margin:10px;
 
 <div class="card">
 
-<h2>🎮 لعبة المراحل الدينية</h2>
+<h2 id="stageTitle"></h2>
 
 <div class="avatar" id="avatar">🙂</div>
-
-<h3 id="stageTitle"></h3>
 
 <h3 id="question"></h3>
 
@@ -64,32 +56,33 @@ margin:10px;
 
 <div id="result"></div>
 
-<button onclick="nextQuestion()">التالي ▶</button>
-
 </div>
 
 <script>
-const sounds={
-correct:new Audio("https://actions.google.com/sounds/v1/cartoon/clang.ogg"),
-wrong:new Audio("https://actions.google.com/sounds/v1/cartoon/boing.ogg"),
-stage:new Audio("https://actions.google.com/sounds/v1/cartoon/concussive_hit_guitar_boing.ogg")
-};
-
 const avatars=["🙂","😎","🤓","🧒","👧"];
 
+const sounds={
+correct:new Audio("https://actions.google.com/sounds/v1/cartoon/clang.ogg"),
+wrong:new Audio("https://actions.google.com/sounds/v1/cartoon/boing.ogg")
+};
+
+// ===== توليد 20 سؤال لكل مرحلة =====
+function generateStage(){
+let arr=[];
+for(let i=1;i<=20;i++){
+arr.push({
+q:"سؤال ديني رقم "+i,
+a:["خيار 1","خيار 2","خيار 3"],
+c:Math.floor(Math.random()*3)
+});
+}
+return arr;
+}
+
 const stages=[
-[
-{q:"كم عدد الأئمة؟",a:["10","12","14"],c:1},
-{q:"أين كربلاء؟",a:["العراق","مصر","لبنان"],c:0}
-],
-[
-{q:"أول إمام؟",a:["علي","الحسن","الحسين"],c:0},
-{q:"أم الحسن والحسين؟",a:["فاطمة","زينب","خديجة"],c:0}
-],
-[
-{q:"لقب الإمام الحسين؟",a:["سيد الشهداء","الصادق","المرتضى"],c:0},
-{q:"مدينة النجف فيها قبر؟",a:["علي","الحسين","العباس"],c:0}
-]
+generateStage(),
+generateStage(),
+generateStage()
 ];
 
 let stageIndex=0;
@@ -98,23 +91,20 @@ let current;
 let score=0;
 let timer,time;
 
-function startStage(){
-sounds.stage.play();
-questions=[...stages[stageIndex]];
-document.getElementById("stageTitle").textContent=
-"⭐ المرحلة "+(stageIndex+1);
-
-changeAvatar();
-loadQuestion();
-}
-
 function changeAvatar(){
 document.getElementById("avatar").textContent=
 avatars[Math.floor(Math.random()*avatars.length)];
 }
 
+function startStage(){
+questions=[...stages[stageIndex]];
+document.getElementById("stageTitle").textContent=
+"⭐ المرحلة "+(stageIndex+1);
+loadQuestion();
+}
+
 function startTimer(){
-time=30;
+time=10;
 updateTimer();
 
 timer=setInterval(()=>{
@@ -125,6 +115,7 @@ if(time<=0){
 clearInterval(timer);
 showResult("⏰ انتهى الوقت!");
 disableButtons();
+setTimeout(loadQuestion,1200);
 }
 },1000);
 }
@@ -136,17 +127,18 @@ document.getElementById("timer").textContent="⏱ "+time;
 function loadQuestion(){
 clearInterval(timer);
 document.getElementById("result").textContent="";
+changeAvatar();
 
 if(questions.length===0){
 stageIndex++;
 
 if(stageIndex>=stages.length){
-alert("🎉 فزت باللعبة! نقاطك: "+score);
+alert("🎉 انتهت اللعبة! نقاطك: "+score);
 location.reload();
 return;
 }
 
-alert("🚀 الانتقال للمرحلة التالية!");
+alert("🚀 المرحلة التالية!");
 startStage();
 return;
 }
@@ -182,6 +174,7 @@ showResult("❌ خطأ!");
 
 updateScore();
 disableButtons();
+setTimeout(loadQuestion,1200);
 }
 
 function showResult(msg){
@@ -195,11 +188,6 @@ document.querySelectorAll("#answers button")
 
 function updateScore(){
 document.getElementById("score").textContent="⭐ النقاط: "+score;
-}
-
-function nextQuestion(){
-changeAvatar();
-loadQuestion();
 }
 
 startStage();
