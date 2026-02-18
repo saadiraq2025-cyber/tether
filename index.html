@@ -2,123 +2,167 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>مسابقة دينية للأطفال</title>
+<title>اللعبة الدينية للأطفال</title>
 
 <style>
 body{
-    font-family: Arial;
-    text-align:center;
-    background:#f5f5f5;
-    padding:20px;
+font-family:Arial;
+background:linear-gradient(#6dd5fa,#ffffff);
+text-align:center;
+padding:15px;
 }
 
 .card{
-    background:white;
-    padding:20px;
-    border-radius:15px;
-    box-shadow:0 0 10px rgba(0,0,0,0.1);
-    max-width:500px;
-    margin:auto;
+background:white;
+max-width:520px;
+margin:auto;
+padding:20px;
+border-radius:20px;
+box-shadow:0 0 15px rgba(0,0,0,0.2);
 }
 
 button{
-    display:block;
-    width:100%;
-    margin:10px 0;
-    padding:12px;
-    font-size:16px;
-    border:none;
-    border-radius:10px;
-    cursor:pointer;
-    background:#4CAF50;
-    color:white;
+width:100%;
+padding:14px;
+margin:8px 0;
+font-size:16px;
+border:none;
+border-radius:12px;
+cursor:pointer;
+background:#4CAF50;
+color:white;
 }
 
-button:hover{
-    background:#45a049;
-}
+button:hover{opacity:0.9}
 
-#timer{
-    font-size:22px;
-    color:red;
-    margin:10px;
-}
+.hidden{display:none}
 
-#result{
-    font-size:20px;
-    margin-top:10px;
-}
+#timer{font-size:22px;color:red}
+#score,#highScore{font-size:18px}
+
+.levelBtn{background:#2196F3}
 </style>
 </head>
 
 <body>
 
 <div class="card">
-<h2 id="question"></h2>
 
-<div id="timer">30</div>
+<h2 id="title">🎮 المسابقة الدينية للأطفال</h2>
+
+<div id="menu">
+<button class="levelBtn" onclick="startGame('easy')">مستوى سهل</button>
+<button class="levelBtn" onclick="startGame('medium')">مستوى متوسط</button>
+<button class="levelBtn" onclick="startGame('hard')">مستوى صعب</button>
+</div>
+
+<div id="game" class="hidden">
+
+<h3 id="question"></h3>
+
+<div id="timer"></div>
+<div id="score"></div>
+<div id="highScore"></div>
 
 <div id="answers"></div>
 
 <div id="result"></div>
 
-<button onclick="nextQuestion()">سؤال جديد</button>
+<button onclick="nextQuestion()">التالي ▶</button>
+
+</div>
+
 </div>
 
 <script>
-const quiz = [
-{
-q:"من هو أول إمام عند الشيعة؟",
-a:["علي بن أبي طالب","الحسن","الحسين"],
-correct:0
-},
-{
-q:"في أي شهر استشهد الإمام الحسين؟",
-a:["رمضان","محرم","صفر"],
-correct:1
-},
-{
-q:"من هي أم الإمام الحسن والحسين؟",
-a:["فاطمة الزهراء","زينب","خديجة"],
-correct:0
-}
-];
+const sounds={
+correct:new Audio("https://actions.google.com/sounds/v1/cartoon/clang.ogg"),
+wrong:new Audio("https://actions.google.com/sounds/v1/cartoon/boing.ogg"),
+win:new Audio("https://actions.google.com/sounds/v1/cartoon/concussive_hit_guitar_boing.ogg"),
+tick:new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg")
+};
 
+const quizData={
+easy:[
+{q:"كم عدد الأئمة؟",a:["10","12","14"],c:1},
+{q:"أين كربلاء؟",a:["العراق","مصر","لبنان"],c:0},
+{q:"شهر عاشوراء؟",a:["محرم","رمضان","صفر"],c:0}
+],
+medium:[
+{q:"أم الحسن والحسين؟",a:["فاطمة","زينب","خديجة"],c:0},
+{q:"أول إمام؟",a:["علي","الحسن","الحسين"],c:0},
+{q:"معركة كربلاء سنة؟",a:["61 هـ","40 هـ","100 هـ"],c:0}
+],
+hard:[
+{q:"لقب الإمام الحسين؟",a:["سيد الشهداء","المرتضى","الصادق"],c:0},
+{q:"عدد أبناء الإمام علي؟",a:["5","7","9"],c:1},
+{q:"مدينة النجف تحتوي قبر؟",a:["علي","الحسين","العباس"],c:0}
+]
+};
+
+let levelQuestions=[];
 let current;
-let time;
-let timer;
+let score=0;
+let highScore=localStorage.getItem("highScore")||0;
+let timer,time;
+
+function startGame(level){
+levelQuestions=[...quizData[level]];
+score=0;
+document.getElementById("menu").classList.add("hidden");
+document.getElementById("game").classList.remove("hidden");
+updateScore();
+loadQuestion();
+}
 
 function startTimer(){
-time = 30;
-document.getElementById("timer").textContent = time;
+time=30;
+updateTimer();
 
-timer = setInterval(()=>{
+timer=setInterval(()=>{
 time--;
-document.getElementById("timer").textContent = time;
+sounds.tick.currentTime=0;
+sounds.tick.play();
+updateTimer();
 
-if(time === 0){
+if(time<=0){
 clearInterval(timer);
-document.getElementById("result").textContent="⏰ انتهى الوقت!";
-disableButtons();
+showResult("⏰ انتهى الوقت!",false);
 }
 },1000);
+}
+
+function updateTimer(){
+document.getElementById("timer").textContent="⏱ "+time;
 }
 
 function loadQuestion(){
 clearInterval(timer);
 document.getElementById("result").textContent="";
 
-current = quiz[Math.floor(Math.random()*quiz.length)];
+if(levelQuestions.length===0){
+sounds.win.play();
+alert("🎉 انتهت المرحلة! نقاطك: "+score);
+if(score>highScore){
+highScore=score;
+localStorage.setItem("highScore",highScore);
+}
+location.reload();
+return;
+}
+
+current=levelQuestions.splice(Math.random()*levelQuestions.length|0,1)[0];
+
 document.getElementById("question").textContent=current.q;
 
-const answersDiv=document.getElementById("answers");
-answersDiv.innerHTML="";
+const answers=document.getElementById("answers");
+answers.innerHTML="";
 
 current.a.forEach((ans,i)=>{
 let btn=document.createElement("button");
 btn.textContent=ans;
 btn.onclick=()=>checkAnswer(i);
-answersDiv.appendChild(btn);
+answers.appendChild(btn);
 });
 
 startTimer();
@@ -127,13 +171,21 @@ startTimer();
 function checkAnswer(i){
 clearInterval(timer);
 
-if(i===current.correct){
-document.getElementById("result").textContent="✅ إجابة صحيحة!";
+if(i===current.c){
+score++;
+sounds.correct.play();
+showResult("✅ صحيح!",true);
 }else{
-document.getElementById("result").textContent="❌ حاول مرة أخرى!";
+sounds.wrong.play();
+showResult("❌ خطأ!",false);
 }
 
+updateScore();
 disableButtons();
+}
+
+function showResult(msg){
+document.getElementById("result").textContent=msg;
 }
 
 function disableButtons(){
@@ -141,11 +193,14 @@ document.querySelectorAll("#answers button")
 .forEach(b=>b.disabled=true);
 }
 
+function updateScore(){
+document.getElementById("score").textContent="⭐ النقاط: "+score;
+document.getElementById("highScore").textContent="🏆 أعلى نتيجة: "+highScore;
+}
+
 function nextQuestion(){
 loadQuestion();
 }
-
-loadQuestion();
 </script>
 
 </body>
