@@ -37,6 +37,7 @@
     </div>
 </div>
 
+<audio id="bg-music" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-17.mp3" loop></audio>
 <audio id="sound-correct" src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3"></audio>
 <audio id="sound-wrong" src="https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3"></audio>
 <audio id="sound-tick" src="https://assets.mixkit.co/active_storage/sfx/2045/2045-preview.mp3"></audio>
@@ -69,17 +70,21 @@ let currentQ = 0;
 let score = 0;
 let timer;
 let timeLeft = 10;
+const bgMusic = document.getElementById('bg-music');
 
-// دالة نطق السؤال
 function speak(text) {
-    window.speechSynthesis.cancel(); // إلغاء أي نطق سابق
+    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ar-SA';
-    utterance.rate = 0.9; // سرعة الكلام
+    utterance.rate = 0.9;
     window.speechSynthesis.speak(utterance);
 }
 
 function startGame() {
+    // تشغيل الموسيقى الخلفية عند البدء
+    bgMusic.volume = 0.2; // صوت منخفض لكي لا يزعج
+    bgMusic.play().catch(e => console.log("المتصفح منع التشغيل التلقائي"));
+    
     currentQ = 0;
     score = 0;
     document.getElementById('score').innerText = score;
@@ -100,7 +105,6 @@ function nextQuestion() {
     const data = quizData[currentQ];
     document.getElementById('q-text').innerText = data.q;
     
-    // نطق السؤال عند ظهوره
     speak(data.q);
     
     const optionsDiv = document.getElementById('options');
@@ -133,7 +137,7 @@ function startTimer() {
 
 function checkAnswer(index) {
     clearInterval(timer);
-    window.speechSynthesis.cancel(); // التوقف عن الكلام عند الإجابة
+    window.speechSynthesis.cancel();
     
     const data = quizData[currentQ];
     const btns = document.getElementsByClassName('option-btn');
@@ -159,6 +163,9 @@ function checkAnswer(index) {
 }
 
 function showResult() {
+    // خفض الموسيقى عند عرض النتيجة النهائية
+    bgMusic.pause();
+    
     const container = document.getElementById('game-container');
     let message = score > 15 ? "أنت عبقري وموالي مخلص! 🏆" : "أحسنت! استمر في التعلم 📚";
     speak(message + " درجتك هي " + score + " من عشرين");
