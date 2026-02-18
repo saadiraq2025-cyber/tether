@@ -7,7 +7,7 @@
     <style>
         :root { --primary: #4caf50; --secondary: #2196f3; --error: #f44336; }
         body { font-family: 'Cairo', sans-serif; background: #f0f4f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .container { background: white; width: 90%; max-width: 600px; padding: 20px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); border: 5px solid #ffca28; position: relative; }
+        .container { background: white; width: 90%; max-width: 600px; padding: 20px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); border: 5px solid #ffca28; position: relative; text-align: center; }
         .timer-circle { width: 60px; height: 60px; border-radius: 50%; border: 4px solid var(--secondary); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; margin: 0 auto 15px; color: var(--secondary); }
         .character { width: 100px; margin-bottom: 10px; }
         .question { font-size: 22px; margin-bottom: 20px; color: #333; font-weight: bold; }
@@ -43,32 +43,41 @@
 
 <script>
 const quizData = [
-    { q: "من هو النبي الذي بنى الكعبة المشرفة؟", a: ["إبراهيم (ع)", "موسى (ع)", "عيسى (ع)"], c: 0 },
-    { q: "ما هو لقب الإمام علي بن أبي طالب (ع) المشهور؟", a: ["الصدّيق", "أمير المؤمنين", "الفاروق"], c: 1 },
-    { q: "من هي أم الإمام الحسين (ع)؟", a: ["خديجة الكبرى", "فاطمة الزهراء (ع)", "أم البنين"], c: 1 },
+    { q: "من هو النبي الذي بنى الكعبة المشرفة؟", a: ["إبراهيم عليه السلام", "موسى عليه السلام", "عيسى عليه السلام"], c: 0 },
+    { q: "ما هو لقب الإمام علي بن أبي طالب عليه السلام المشهور؟", a: ["الصدّيق", "أمير المؤمنين", "الفاروق"], c: 1 },
+    { q: "من هي أم الإمام الحسين عليه السلام؟", a: ["خديجة الكبرى", "فاطمة الزهراء عليها السلام", "أم البنين"], c: 1 },
     { q: "كم عدد ركعات صلاة الصبح؟", a: ["3 ركعات", "4 ركعات", "ركعتان"], c: 2 },
-    { q: "في أي مدينة يقع مرقد الإمام الرضا (ع)؟", a: ["النجف", "مشهد", "كربلاء"], c: 1 },
-    { q: "ما هو الكتاب السماوي الذي نزل على النبي محمد (ص)؟", a: ["التوراة", "الإنجيل", "القرآن الكريم"], c: 2 },
-    { q: "من هو أكبر أبناء الإمام علي (ع)؟", a: ["الإمام الحسين", "الإمام الحسن", "العباس"], c: 1 },
+    { q: "في أي مدينة يقع مرقد الإمام الرضا عليه السلام؟", a: ["النجف", "مشهد", "كربلاء"], c: 1 },
+    { q: "ما هو الكتاب السماوي الذي نزل على النبي محمد صلى الله عليه وآله؟", a: ["التوراة", "الإنجيل", "القرآن الكريم"], c: 2 },
+    { q: "من هو أكبر أبناء الإمام علي عليه السلام؟", a: ["الإمام الحسين", "الإمام الحسن", "العباس"], c: 1 },
     { q: "ماذا نقول عند الركوع في الصلاة؟", a: ["سبحان ربي العظيم وبحمده", "سبحان ربي الأعلى وبحمده", "الحمد لله"], c: 0 },
-    { q: "من هو الإمام الغائب الموعود (عج)؟", a: ["الإمام الجواد", "الإمام المهدي", "الإمام الهادي"], c: 1 },
+    { q: "من هو الإمام الغائب الموعود عجل الله فرجه؟", a: ["الإمام الجواد", "الإمام المهدي", "الإمام الهادي"], c: 1 },
     { q: "في أي شهر يصوم المسلمون؟", a: ["شعبان", "رجب", "رمضان"], c: 2 },
     { q: "من هو بطل كربلاء الذي جلب الماء للأطفال؟", a: ["علي الأكبر", "أبا الفضل العباس", "القاسم"], c: 1 },
     { q: "كم عدد أصول الدين عند الشيعة؟", a: ["3 أصول", "5 أصول", "7 أصول"], c: 1 },
-    { q: "ما هو لقب الإمام الخامس محمد بن علي (ع)؟", a: ["الباقر", "الصادق", "الكاظم"], c: 0 },
-    { q: "أين ولد الإمام علي بن أبي طالب (ع)؟", a: ["في المدينة", "داخل الكعبة", "في الكوفة"], c: 1 },
-    { q: "من هي زوجة النبي محمد (ص) الأولى؟", a: ["عائشة", "أم سلمة", "خديجة الكبرى"], c: 2 },
+    { q: "ما هو لقب الإمام الخامس محمد بن علي عليه السلام؟", a: ["الباقر", "الصادق", "الكاظم"], c: 0 },
+    { q: "أين ولد الإمام علي بن أبي طالب عليه السلام؟", a: ["في المدينة", "داخل الكعبة", "في الكوفة"], c: 1 },
+    { q: "من هي زوجة النبي محمد صلى الله عليه وآله الأولى؟", a: ["عائشة", "أم سلمة", "خديجة الكبرى"], c: 2 },
     { q: "ما هو أول أصل من أصول الدين؟", a: ["العدل", "التوحيد", "النبوة"], c: 1 },
-    { q: "من هو إمامنا الصادق (ع)؟", a: ["الإمام الرابع", "الإمام السادس", "الإمام الثامن"], c: 1 },
-    { q: "ما اسم النهر الذي منعوا الحسين (ع) من شرب مائه؟", a: ["النيل", "دجلة", "الفرات"], c: 2 },
+    { q: "من هو إمامنا الصادق عليه السلام؟", a: ["الإمام الرابع", "الإمام السادس", "الإمام الثامن"], c: 1 },
+    { q: "ما اسم النهر الذي منعوا الحسين عليه السلام من شرب مائه؟", a: ["النيل", "دجلة", "الفرات"], c: 2 },
     { q: "كم عدد فروع الدين؟", a: ["10 فروع", "5 فروع", "12 فرعاً"], c: 0 },
-    { q: "من هي السيدة التي كانت مع الحسين في كربلاء وخطبت بالكوفة؟", a: ["سكينة", "زينب الكبرى (ع)", "رباب"], c: 1 }
+    { q: "من هي السيدة التي كانت مع الحسين في كربلاء وخطبت بالكوفة؟", a: ["سكينة", "زينب الكبرى عليها السلام", "رباب"], c: 1 }
 ];
 
 let currentQ = 0;
 let score = 0;
 let timer;
 let timeLeft = 10;
+
+// دالة نطق السؤال
+function speak(text) {
+    window.speechSynthesis.cancel(); // إلغاء أي نطق سابق
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ar-SA';
+    utterance.rate = 0.9; // سرعة الكلام
+    window.speechSynthesis.speak(utterance);
+}
 
 function startGame() {
     currentQ = 0;
@@ -91,6 +100,9 @@ function nextQuestion() {
     const data = quizData[currentQ];
     document.getElementById('q-text').innerText = data.q;
     
+    // نطق السؤال عند ظهوره
+    speak(data.q);
+    
     const optionsDiv = document.getElementById('options');
     optionsDiv.innerHTML = "";
     
@@ -110,17 +122,19 @@ function startTimer() {
     timer = setInterval(() => {
         timeLeft--;
         document.getElementById('timer').innerText = timeLeft;
-        if(timeLeft <= 3) document.getElementById('sound-tick').play();
+        if(timeLeft <= 3 && timeLeft > 0) document.getElementById('sound-tick').play();
         
         if (timeLeft <= 0) {
             clearInterval(timer);
-            checkAnswer(-1); // الوقت انتهى
+            checkAnswer(-1); 
         }
     }, 1000);
 }
 
 function checkAnswer(index) {
     clearInterval(timer);
+    window.speechSynthesis.cancel(); // التوقف عن الكلام عند الإجابة
+    
     const data = quizData[currentQ];
     const btns = document.getElementsByClassName('option-btn');
     const feedback = document.getElementById('feedback');
@@ -147,6 +161,8 @@ function checkAnswer(index) {
 function showResult() {
     const container = document.getElementById('game-container');
     let message = score > 15 ? "أنت عبقري وموالي مخلص! 🏆" : "أحسنت! استمر في التعلم 📚";
+    speak(message + " درجتك هي " + score + " من عشرين");
+    
     container.innerHTML = `
         <img src="https://cdn-icons-png.flaticon.com/512/3112/3112946.png" style="width:150px">
         <h2>انتهت المسابقة!</h2>
