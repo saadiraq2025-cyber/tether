@@ -3,194 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مسابقة الأبطال الصغار - 40 سؤالاً</title>
+    <title>مسابقة الأبطال الناطقين</title>
     <style>
-        :root { --main-bg: #e3f2fd; --card-bg: #ffffff; --primary: #1e88e5; --accent: #ffb300; --success: #43a047; --danger: #e53935; }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--main-bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; overflow-x: hidden; }
-        .game-container { background: var(--card-bg); width: 95%; max-width: 650px; padding: 25px; border-radius: 30px; box-shadow: 0 15px 40px rgba(0,0,0,0.15); border: 6px solid var(--primary); text-align: center; position: relative; }
-        .timer-container { width: 70px; height: 70px; border-radius: 50%; border: 5px solid var(--primary); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; margin: 0 auto 15px; transition: 0.3s; color: var(--primary); }
-        .timer-warning { border-color: var(--danger) !important; color: var(--danger) !important; transform: scale(1.1); }
-        .character { width: 120px; height: auto; margin-bottom: 10px; }
-        .question-text { font-size: 24px; color: #333; margin-bottom: 25px; line-height: 1.5; font-weight: 700; }
-        .options-grid { display: grid; gap: 12px; }
-        .opt-btn { background: #f8f9fa; border: 2px solid #dee2e6; padding: 15px; border-radius: 20px; font-size: 18px; cursor: pointer; transition: all 0.2s; font-weight: 600; color: #444; }
-        .opt-btn:hover { background: var(--main-bg); border-color: var(--primary); }
-        .correct { background: var(--success) !important; color: white !important; border-color: #2e7d32 !important; }
-        .wrong { background: var(--danger) !important; color: white !important; border-color: #c62828 !important; }
-        .footer-info { margin-top: 25px; display: flex; justify-content: space-between; font-size: 16px; font-weight: bold; color: #777; border-top: 2px dashed #eee; padding-top: 15px; }
-        #feedback { font-size: 20px; margin-top: 15px; height: 30px; font-weight: bold; }
-        .start-screen h1 { color: var(--primary); font-size: 30px; }
+        :root { --main-bg: #fdf6e3; --primary: #2e7d32; --accent: #ff9800; --danger: #d32f2f; }
+        body { font-family: 'Cairo', sans-serif; background: var(--main-bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .game-card { background: white; width: 90%; max-width: 600px; padding: 30px; border-radius: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); border: 8px solid #a5d6a7; text-align: center; }
+        .timer-box { width: 80px; height: 80px; border-radius: 50%; border: 6px solid var(--primary); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; margin: 0 auto 20px; color: var(--primary); background: #f1f8e9; }
+        .timer-low { border-color: var(--danger); color: var(--danger); animation: shake 0.5s infinite; }
+        @keyframes shake { 0% { transform: rotate(0deg); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } 100% { transform: rotate(0deg); } }
+        .q-text { font-size: 26px; color: #333; margin-bottom: 25px; min-height: 80px; display: flex; align-items: center; justify-content: center; font-weight: 800; }
+        .options-list { display: grid; gap: 15px; }
+        .btn-opt { background: #f1f8e9; border: 3px solid #c8e6c9; padding: 18px; border-radius: 20px; font-size: 20px; cursor: pointer; transition: 0.2s; font-weight: 700; color: #2e7d32; }
+        .btn-opt:hover { background: #e8f5e9; border-color: var(--primary); }
+        .correct { background: #4caf50 !important; color: white !important; }
+        .wrong { background: #ef5350 !important; color: white !important; }
+        .score-board { margin-top: 25px; display: flex; justify-content: space-between; font-weight: bold; color: #666; font-size: 18px; }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<div class="game-container" id="main-box">
-    <div id="start-screen" class="start-screen">
-        <img src="https://cdn-icons-png.flaticon.com/512/3940/3940403.png" class="character">
-        <h1>مسابقة الأبطال الصغار</h1>
-        <p>هل تستطيع الإجابة على 40 سؤالاً عن أهل البيت (ع)؟</p>
-        <button class="opt-btn" style="background: var(--accent); width: 200px;" onclick="initGame()">ابدأ المغامرة! 🚀</button>
+<div class="game-card" id="game-wrap">
+    <div id="start-area">
+        <img src="https://cdn-icons-png.flaticon.com/512/3940/3940403.png" style="width: 150px;">
+        <h1 style="color: var(--primary);">مغامرة المعرفة الإسلامية</h1>
+        <p style="font-size: 18px;">40 سؤالاً ممتعاً مع خاصية نطق الأسئلة!</p>
+        <button class="btn-opt" style="background: var(--accent); color: white; border: none; width: 220px;" onclick="begin()">ابدأ اللعب واستمع 🔊</button>
     </div>
 
-    <div id="quiz-screen" style="display:none;">
-        <div class="timer-container" id="timer-display">10</div>
-        <div class="question-text" id="q-text">السؤال يظهر هنا</div>
-        <div class="options-grid" id="options-box"></div>
-        <div id="feedback"></div>
-        <div class="footer-info">
-            <span>النقاط: <span id="score-val">0</span></span>
-            <span>السؤال: <span id="q-progress">1</span> / 40</span>
+    <div id="quiz-area" style="display:none;">
+        <div class="timer-box" id="timer">15</div>
+        <div class="q-text" id="question">جاري التحميل...</div>
+        <div class="options-list" id="options"></div>
+        <div class="score-board">
+            <span>النقاط: <span id="pts">0</span></span>
+            <span>السؤال: <span id="prog">1</span> / 40</span>
         </div>
     </div>
 </div>
 
-<audio id="snd-correct" src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3"></audio>
-<audio id="snd-wrong" src="https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3"></audio>
-<audio id="snd-tick" src="https://www.soundjay.com/buttons/sounds/button-20.mp3"></audio>
+<audio id="sound-tick" src="https://www.soundjay.com/buttons/sounds/button-20.mp3"></audio>
+<audio id="sound-win" src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3"></audio>
+<audio id="sound-fail" src="https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3"></audio>
 
 <script>
-const questions = [
-    { q: "من هو النبي الذي ابتلعه الحوت؟", a: ["يونس (ع)", "يوسف (ع)", "نوح (ع)"], c: 0 },
-    { q: "من هو أول إمام للمسلمين؟", a: ["الإمام الحسن (ع)", "الإمام علي (ع)", "الإمام الحسين (ع)"], c: 1 },
-    { q: "ما هو لقب الإمام علي (ع)؟", a: ["المرتضى", "المجتبى", "السجاد"], c: 0 },
-    { q: "من هي سيدة نساء العالمين؟", a: ["فاطمة الزهراء (ع)", "السيدة خديجة", "السيدة مريم"], c: 0 },
-    { q: "كم عدد أئمة أهل البيت المعصومين؟", a: ["10 أئمة", "14 معصوم", "12 إماماً"], c: 2 },
-    { q: "من هو الإمام الثاني؟", a: ["الإمام الحسين (ع)", "الإمام الحسن (ع)", "الإمام علي (ع)"], c: 1 },
-    { q: "من هو شهيد كربلاء؟", a: ["الإمام الحسين (ع)", "الإمام الصادق (ع)", "الإمام الجواد (ع)"], c: 0 },
-    { q: "ما اسم والد الإمام المهدي (عج)؟", a: ["الإمام الهادي (ع)", "الإمام العسكري (ع)", "الإمام الرضا (ع)"], c: 1 },
+const data = [
+    { q: "من هو أول أئمة أهل البيت عليهم السلام؟", a: ["الإمام علي (ع)", "الإمام الحسن (ع)", "الإمام الحسين (ع)"], c: 0 },
+    { q: "كم عدد الأئمة المعصومين عليهم السلام؟", a: ["عشرة", "إثنا عشر", "أربعة عشر"], c: 1 },
+    { q: "من هي سيدة نساء العالمين؟", a: ["السيدة خديجة", "السيدة مريم", "فاطمة الزهراء (ع)"], c: 2 },
+    { q: "ما هو لقب الإمام الثامن علي بن موسى (ع)؟", a: ["الرضا", "الجواد", "الهادي"], c: 0 },
+    { q: "من هو النبي الذي بنى الكعبة؟", a: ["إبراهيم (ع)", "يوسف (ع)", "نوح (ع)"], c: 0 },
+    { q: "ما اسم والد الإمام الحسين (ع)؟", a: ["حمزة", "علي بن أبي طالب (ع)", "العباس"], c: 1 },
+    { q: "أين ولد الإمام علي (ع)؟", a: ["في مكة", "في جوف الكعبة", "في المدينة"], c: 1 },
+    { q: "من هو الإمام الغائب الذي ننتظر ظهوره؟", a: ["الإمام المهدي (عج)", "الإمام العسكري", "الإمام الهادي"], c: 0 },
+    { q: "كم عدد ركعات صلاة الصبح؟", a: ["3 ركعات", "ركعتان", "4 ركعات"], c: 1 },
+    { q: "ماذا نقول في السجود؟", a: ["سبحان ربي العظيم", "سبحان ربي الأعلى", "الحمد لله"], c: 1 },
+    { q: "من هو الإمام الذي يلقب بـ زين العابدين؟", a: ["الإمام السجاد", "الإمام الصادق", "الإمام الباقر"], c: 0 },
+    { q: "في أي شهر نصوم؟", a: ["شوال", "رجب", "رمضان"], c: 2 },
+    { q: "من هو بطل كربلاء الذي جلب الماء؟", a: ["علي الأكبر", "أبا الفضل العباس", "القاسم"], c: 1 },
+    { q: "ما هو لقب الإمام الخامس محمد بن علي (ع)؟", a: ["الباقر", "الصادق", "الكاظم"], c: 0 },
+    { q: "ما اسم أم الإمام الحسين (ع)؟", a: ["أم البنين", "فاطمة الزهراء (ع)", "زينب"], c: 1 },
+    { q: "من هو الإمام السادس؟", a: ["الإمام الصادق", "الإمام الجواد", "الإمام الرضا"], c: 0 },
+    { q: "ما هو أول أصل من أصول الدين؟", a: ["العدل", "النبوة", "التوحيد"], c: 2 },
     { q: "أين يقع مرقد الإمام علي (ع)؟", a: ["كربلاء", "النجف الأشرف", "سامراء"], c: 1 },
-    { q: "ما هو لقب الإمام السجاد (ع)؟", a: ["زين العابدين", "الباقر", "الكاظم"], c: 0 },
-    { q: "من هو الإمام الذي لقب بـ (الكاظم)؟", a: ["موسى بن جعفر (ع)", "علي بن موسى (ع)", "محمد بن علي (ع)"], c: 0 },
-    { q: "ما اسم أم الإمام الحسين (ع)؟", a: ["أم البنين", "فاطمة الزهراء (ع)", "أم سلمة"], c: 1 },
-    { q: "من هو الإمام الثامن؟", a: ["الإمام الرضا (ع)", "الإمام الجواد (ع)", "الإمام الهادي (ع)"], c: 0 },
-    { q: "ما هو لقب الإمام التاسع محمد بن علي (ع)؟", a: ["الهادي", "الجواد", "الكاظم"], c: 1 },
-    { q: "كم عدد فروع الدين؟", a: ["5 فروع", "10 فروع", "8 فروع"], c: 1 },
-    { q: "ما هو أول فرع من فروع الدين؟", a: ["الزكاة", "الصلاة", "الصوم"], c: 1 },
-    { q: "في أي شهر نزل القرآن الكريم؟", a: ["رمضان", "رجب", "شوال"], c: 0 },
-    { q: "من هو بطل واقعة الطف الذي قطعت كفاه؟", a: ["علي الأكبر", "أبا الفضل العباس (ع)", "القاسم"], c: 1 },
-    { q: "ما هو لقب الإمام العاشر علي بن محمد (ع)؟", a: ["العسكري", "الهادي", "الرضا"], c: 1 },
-    { q: "أين ولد الإمام علي (ع)؟", a: ["المدينة المنورة", "جوف الكعبة", "مكة المكرمة"], c: 1 },
-    { q: "من هو النبي الذي بنى السفينة؟", a: ["نوح (ع)", "موسى (ع)", "إبراهيم (ع)"], c: 0 },
-    { q: "ما هي قبلة المسلمين في الصلاة؟", a: ["بيت المقدس", "الكعبة المشرفة", "المسجد النبوي"], c: 1 },
-    { q: "كم عدد ركعات صلاة المغرب؟", a: ["2", "3", "4"], c: 1 },
-    { q: "من هي ابنة الإمام الحسين التي توفيت في خرابة الشام؟", a: ["سكينة", "رقية", "زينب"], c: 1 },
-    { q: "ما هو اسم بئر زمزم؟", a: ["في مكة", "في المدينة", "في النجف"], c: 0 },
-    { q: "من هو الصبي الذي شارك في كربلاء وقال الموت أحلى من العسل؟", a: ["علي الأصغر", "القاسم بن الحسن", "عبد الله"], c: 1 },
-    { q: "من هو الإمام الذي أسس المدرسة العلمية الكبرى؟", a: ["الإمام الصادق (ع)", "الإمام السجاد (ع)", "الإمام الكاظم (ع)"], c: 0 },
-    { q: "ما هو أصل الدين الذي يعني أن الله واحد؟", a: ["العدل", "التوحيد", "النبوة"], c: 1 },
-    { q: "ماذا نقول في السجود؟", a: ["سبحان ربي العظيم", "سبحان ربي الأعلى", "استغفر الله"], c: 1 },
-    { q: "من هو النبي الذي كلم الله؟", a: ["موسى (ع)", "عيسى (ع)", "داوود (ع)"], c: 0 },
-    { q: "من هو الإمام الذي يلقب بـ غريب طوس؟", a: ["الإمام الرضا (ع)", "الإمام الحسين (ع)", "الإمام المهدي (عج)"], c: 0 },
+    { q: "ما اسم ابن الإمام الحسين الرضيع؟", a: ["عبد الله", "علي الأكبر", "جعفر"], c: 0 },
+    { q: "من هي ابنة النبي محمد (ص)؟", a: ["زينب", "رقية", "فاطمة الزهراء"], c: 2 },
+    { q: "من هو النبي الذي كلم الله؟", a: ["عيسى (ع)", "موسى (ع)", "داوود (ع)"], c: 1 },
     { q: "كم عدد أصول الدين؟", a: ["3", "5", "10"], c: 1 },
-    { q: "ما هي عاصمة الإمام علي (ع) في خلافته؟", a: ["البصرة", "الكوفة", "المدينة"], c: 1 },
-    { q: "ما اسم والدة السيدة فاطمة الزهراء (ع)؟", a: ["خديجة الكبرى", "حليمة", "فاطمة بنت أسد"], c: 0 },
-    { q: "من هو الإمام الذي ولد في 15 رمضان؟", a: ["الإمام الحسن (ع)", "الإمام الحسين (ع)", "الإمام الصادق (ع)"], c: 0 },
-    { q: "ما هو الدعاء المشهور الذي يقرأ ليلة الجمعة؟", a: ["دعاء التوسل", "دعاء كميل", "دعاء الندبة"], c: 1 },
-    { q: "من هو أصغر شهيد في كربلاء؟", a: ["عبد الله الرضيع", "القاسم", "علي الأكبر"], c: 0 },
-    { q: "أين يقع مرقد الإمامين العسكريين؟", a: ["بغداد", "سامراء", "البقيع"], c: 1 },
-    { q: "من هو النبي الذي أحياه الله بعد موته بـ 100 عام؟", a: ["عزير (ع)", "سليمان (ع)", "أيوب (ع)"], c: 0 },
-    { q: "من هو الإمام الذي سيملأ الأرض قسطاً وعدلاً؟", a: ["الإمام المهدي (عج)", "الإمام الرضا (ع)", "الإمام علي (ع)"], c: 0 }
+    { q: "ما هو لقب الإمام الكاظم (ع)؟", a: ["باب الحوائج", "غريب طوس", "أبو تراب"], c: 0 },
+    { q: "من هو الإمام الملقب بالجواد؟", a: ["الإمام التاسع", "الإمام العاشر", "الإمام الثامن"], c: 0 },
+    { q: "أين استشهد الإمام الحسين (ع)؟", a: ["الكوفة", "كربلاء", "المدينة"], c: 1 },
+    { q: "ما هو الكتاب الذي نزل على النبي محمد (ص)؟", a: ["التوراة", "القرآن", "الإنجيل"], c: 1 },
+    { q: "من هو عم النبي الذي استشهد في أحد؟", a: ["أبو طالب", "حمزة", "العباس"], c: 1 },
+    { q: "ما هي عاصمة الإمام علي (ع)؟", a: ["البصرة", "الكوفة", "مكة"], c: 1 },
+    { q: "كم عدد فروع الدين؟", a: ["5", "10", "12"], c: 1 },
+    { q: "من هو الإمام الذي ولد في 15 رمضان؟", a: ["الإمام الحسن (ع)", "الإمام الحسين (ع)", "الإمام السجاد"], c: 0 },
+    { q: "من هي أخت الإمام الحسين في كربلاء؟", a: ["زينب الكبرى", "سكينة", "فاطمة"], c: 0 },
+    { q: "ما هو لقب الإمام العاشر؟", a: ["الهادي", "العسكري", "الرضا"], c: 0 },
+    { q: "كم عدد ركعات صلاة المغرب؟", a: ["2", "4", "3"], c: 2 },
+    { q: "ما هو أول فرع من فروع الدين؟", a: ["الصوم", "الصلاة", "الجهاد"], c: 1 },
+    { q: "من هو والد الإمام علي (ع)؟", a: ["عبد المطلب", "أبو طالب", "حمزة"], c: 1 },
+    { q: "ما هو لقب الإمام الحادي عشر؟", a: ["العسكري", "الهادي", "الجواد"], c: 0 },
+    { q: "من هو النبي الذي عاش في زمن نمرود؟", a: ["إبراهيم (ع)", "لوط (ع)", "يحيى (ع)"], c: 0 },
+    { q: "أين يقع مرقد الإمام الرضا (ع)؟", a: ["طهران", "مشهد", "قم"], c: 1 },
+    { q: "ماذا نقول في الركوع؟", a: ["سبحان ربي العظيم", "سبحان ربي الأعلى", "الله أكبر"], c: 0 },
+    { q: "من هو الإمام الذي سيظهر لينشر العدل؟", a: ["الإمام المهدي (عج)", "الإمام الهادي", "الإمام الصادق"], c: 0 }
 ];
 
-let currentIdx = 0;
-let score = 0;
-let timerObj;
-let timeLeft = 10;
+let idx = 0; let score = 0; let timer; let sec = 15;
 
-function initGame() {
-    document.getElementById('start-screen').style.display = 'none';
-    document.getElementById('quiz-screen').style.display = 'block';
-    loadQuestion();
+function speak(text) {
+    window.speechSynthesis.cancel();
+    let utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ar-SA';
+    utterance.rate = 0.9;
+    window.speechSynthesis.speak(utterance);
 }
 
-function loadQuestion() {
-    if (currentIdx >= questions.length) {
-        finishGame();
-        return;
-    }
+function begin() {
+    document.getElementById('start-area').style.display = 'none';
+    document.getElementById('quiz-area').style.display = 'block';
+    load();
+}
+
+function load() {
+    if (idx >= data.length) { finish(); return; }
+    sec = 15;
+    document.getElementById('timer').innerText = sec;
+    document.getElementById('timer').classList.remove('timer-low');
+    document.getElementById('prog').innerText = idx + 1;
     
-    resetTimer();
-    const qData = questions[currentIdx];
-    document.getElementById('q-text').innerText = qData.q;
-    document.getElementById('q-progress').innerText = currentIdx + 1;
-    document.getElementById('feedback').innerText = "";
+    const q = data[idx];
+    document.getElementById('question').innerText = q.q;
+    speak(q.q); // نطق السؤال
     
-    const optionsBox = document.getElementById('options-box');
-    optionsBox.innerHTML = "";
-    
-    qData.a.forEach((option, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'opt-btn';
-        btn.innerText = option;
-        btn.onclick = () => checkAnswer(i);
-        optionsBox.appendChild(btn);
+    const container = document.getElementById('options');
+    container.innerHTML = "";
+    q.a.forEach((opt, i) => {
+        const b = document.createElement('button');
+        b.className = 'btn-opt';
+        b.innerText = opt;
+        b.onclick = () => check(i);
+        container.appendChild(b);
     });
     
-    startTimer();
-}
-
-function startTimer() {
-    timerObj = setInterval(() => {
-        timeLeft--;
-        const display = document.getElementById('timer-display');
-        display.innerText = timeLeft;
-        
-        if (timeLeft <= 3) {
-            display.classList.add('timer-warning');
-            document.getElementById('snd-tick').play();
-        }
-        
-        if (timeLeft <= 0) {
-            clearInterval(timerObj);
-            checkAnswer(-1);
-        }
+    clearInterval(timer);
+    timer = setInterval(() => {
+        sec--;
+        document.getElementById('timer').innerText = sec;
+        document.getElementById('sound-tick').play();
+        if(sec <= 5) document.getElementById('timer').classList.add('timer-low');
+        if(sec <= 0) { clearInterval(timer); check(-1); }
     }, 1000);
 }
 
-function resetTimer() {
-    clearInterval(timerObj);
-    timeLeft = 10;
-    const display = document.getElementById('timer-display');
-    display.innerText = timeLeft;
-    display.classList.remove('timer-warning');
-}
-
-function checkAnswer(choice) {
-    clearInterval(timerObj);
-    const qData = questions[currentIdx];
-    const btns = document.querySelectorAll('.opt-btn');
-    const feedback = document.getElementById('feedback');
-
-    if (choice === qData.c) {
+function check(choice) {
+    clearInterval(timer);
+    const q = data[idx];
+    const btns = document.querySelectorAll('.btn-opt');
+    
+    if (choice === q.c) {
         score++;
-        document.getElementById('score-val').innerText = score;
+        document.getElementById('pts').innerText = score;
         if(choice !== -1) btns[choice].classList.add('correct');
-        feedback.innerText = "⭐ إجابة رائعة يا بطل! ⭐";
-        feedback.style.color = "var(--success)";
-        document.getElementById('snd-correct').play();
+        document.getElementById('sound-win').play();
     } else {
-        if (choice !== -1) btns[choice].classList.add('wrong');
-        btns[qData.c].classList.add('correct');
-        feedback.innerText = choice === -1 ? "⏰ انتهى الوقت! تعلمها للمرة القادمة" : "معلومة جديدة لك، الإجابة باللون الأخضر ✅";
-        feedback.style.color = "var(--danger)";
-        document.getElementById('snd-wrong').play();
+        if(choice !== -1) btns[choice].classList.add('wrong');
+        btns[q.c].classList.add('correct');
+        document.getElementById('sound-fail').play();
     }
-
-    currentIdx++;
-    setTimeout(loadQuestion, 2500);
+    
+    idx++;
+    setTimeout(load, 2500);
 }
 
-function finishGame() {
-    const box = document.getElementById('main-box');
-    let rank = score > 35 ? "أنت عالم صغير ممتاز! 🏆" : (score > 20 ? "أحسنت، معلوماتك جيدة جداً! 🌟" : "أحسنت المحاولة، استمر في القراءة 📖");
-    box.innerHTML = `
-        <img src="https://cdn-icons-png.flaticon.com/512/3112/3112946.png" style="width:140px">
-        <h2>انتهت المسابقة!</h2>
-        <p style="font-size:22px">${rank}</p>
-        <p style="font-size:32px; color:var(--primary)">درجتك النهائية: ${score} من 40</p>
-        <button class="opt-btn" style="background:var(--accent); width:220px" onclick="location.reload()">إعادة التحدي 🔄</button>
+function finish() {
+    document.getElementById('game-wrap').innerHTML = `
+        <h2 style="color:var(--primary)">انتهت المسابقة! 🎉</h2>
+        <p style="font-size:28px">لقد حصلت على ${score} من 40</p>
+        <button class="btn-opt" onclick="location.reload()">إعادة التحدي 🔄</button>
     `;
+    speak("انتهت المسابقة. لقد حصلت على " + score + " من أربعين.");
 }
 </script>
 </body>
