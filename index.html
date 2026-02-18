@@ -3,94 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مسابقة الأبطال الصغار</title>
+    <title>مسابقة الأبطال الصغار الشيعية</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #e0f7fa; text-align: center; padding: 20px; }
-        .quiz-container { background: white; max-width: 500px; margin: auto; padding: 30px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); border: 4px solid #4fc3f7; }
-        .character { width: 150px; height: 150px; margin-bottom: 20px; border-radius: 50%; }
-        .question { font-size: 24px; color: #0277bd; margin-bottom: 20px; font-weight: bold; }
-        .btn { display: block; width: 100%; padding: 15px; margin: 10px 0; font-size: 18px; cursor: pointer; border: none; border-radius: 10px; transition: 0.3s; background-color: #81d4fa; color: white; font-weight: bold; }
-        .btn:hover { background-color: #29b6f6; transform: scale(1.02); }
-        #feedback { font-size: 22px; font-weight: bold; margin-top: 20px; min-height: 30px; }
-        .score { font-size: 18px; color: #555; margin-top: 10px; }
+        :root { --primary: #4caf50; --secondary: #2196f3; --error: #f44336; }
+        body { font-family: 'Cairo', sans-serif; background: #f0f4f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: white; width: 90%; max-width: 600px; padding: 20px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); border: 5px solid #ffca28; position: relative; }
+        .timer-circle { width: 60px; height: 60px; border-radius: 50%; border: 4px solid var(--secondary); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; margin: 0 auto 15px; color: var(--secondary); }
+        .character { width: 100px; margin-bottom: 10px; }
+        .question { font-size: 22px; margin-bottom: 20px; color: #333; font-weight: bold; }
+        .options { display: grid; gap: 10px; }
+        .option-btn { padding: 15px; border: 2px solid #e0e0e0; border-radius: 15px; background: white; cursor: pointer; font-size: 18px; transition: 0.3s; font-weight: 600; }
+        .option-btn:hover { background: #fff9c4; border-color: #ffca28; }
+        .option-btn.correct { background: #c8e6c9 !important; border-color: #4caf50 !important; }
+        .option-btn.wrong { background: #ffcdd2 !important; border-color: #f44336 !important; }
+        .stats { margin-top: 20px; display: flex; justify-content: space-between; font-size: 16px; color: #666; }
+        #feedback { font-size: 20px; font-weight: bold; margin-top: 15px; min-height: 30px; }
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<div class="quiz-container">
-    <img src="https://cdn-icons-png.flaticon.com/512/4392/4392465.png" alt="شخصية كرتونية" class="character" id="char-img">
-    
-    <div id="quiz-box">
-        <div class="question" id="question-text">تحميل السؤال...</div>
-        <div id="options-container"></div>
-        <div id="feedback"></div>
-        <div class="score">النتيجة: <span id="score-val">0</span></div>
+<div class="container" id="game-container">
+    <div class="timer-circle" id="timer">10</div>
+    <img src="https://cdn-icons-png.flaticon.com/512/3940/3940403.png" class="character" alt="Character">
+    <div class="question" id="q-text">هل أنت مستعد للمسابقة؟</div>
+    <div class="options" id="options">
+        <button class="option-btn" onclick="startGame()">إضغط هنا للبدء باللعبة! 🚀</button>
+    </div>
+    <div id="feedback"></div>
+    <div class="stats">
+        <span>السؤال: <span id="q-num">0</span> / 20</span>
+        <span>النقاط: <span id="score">0</span></span>
     </div>
 </div>
 
-<audio id="correct-sound" src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3"></audio>
-<audio id="wrong-sound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
+<audio id="sound-correct" src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3"></audio>
+<audio id="sound-wrong" src="https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3"></audio>
+<audio id="sound-tick" src="https://assets.mixkit.co/active_storage/sfx/2045/2045-preview.mp3"></audio>
 
 <script>
-    const quizData = [
-        { q: "من هو أول أئمة أهل البيت عليهم السلام؟", a: ["الإمام علي (ع)", "الإمام الحسن (ع)", "الإمام الحسين (ع)"], correct: 0 },
-        { q: "كم عدد الأئمة المعصومين عليهم السلام؟", a: ["10 أئمة", "12 إماماً", "14 إماماً"], correct: 1 },
-        { q: "ما هو لقب الإمام الثامن علي بن موسى (ع)؟", a: ["الجواد", "الرضا", "الكاظم"], correct: 1 },
-        { q: "من هي سيدة نساء العالمين؟", a: ["السيدة خديجة", "السيدة زينب", "السيدة فاطمة الزهراء"], correct: 2 }
-    ];
+const quizData = [
+    { q: "من هو النبي الذي بنى الكعبة المشرفة؟", a: ["إبراهيم (ع)", "موسى (ع)", "عيسى (ع)"], c: 0 },
+    { q: "ما هو لقب الإمام علي بن أبي طالب (ع) المشهور؟", a: ["الصدّيق", "أمير المؤمنين", "الفاروق"], c: 1 },
+    { q: "من هي أم الإمام الحسين (ع)؟", a: ["خديجة الكبرى", "فاطمة الزهراء (ع)", "أم البنين"], c: 1 },
+    { q: "كم عدد ركعات صلاة الصبح؟", a: ["3 ركعات", "4 ركعات", "ركعتان"], c: 2 },
+    { q: "في أي مدينة يقع مرقد الإمام الرضا (ع)؟", a: ["النجف", "مشهد", "كربلاء"], c: 1 },
+    { q: "ما هو الكتاب السماوي الذي نزل على النبي محمد (ص)؟", a: ["التوراة", "الإنجيل", "القرآن الكريم"], c: 2 },
+    { q: "من هو أكبر أبناء الإمام علي (ع)؟", a: ["الإمام الحسين", "الإمام الحسن", "العباس"], c: 1 },
+    { q: "ماذا نقول عند الركوع في الصلاة؟", a: ["سبحان ربي العظيم وبحمده", "سبحان ربي الأعلى وبحمده", "الحمد لله"], c: 0 },
+    { q: "من هو الإمام الغائب الموعود (عج)؟", a: ["الإمام الجواد", "الإمام المهدي", "الإمام الهادي"], c: 1 },
+    { q: "في أي شهر يصوم المسلمون؟", a: ["شعبان", "رجب", "رمضان"], c: 2 },
+    { q: "من هو بطل كربلاء الذي جلب الماء للأطفال؟", a: ["علي الأكبر", "أبا الفضل العباس", "القاسم"], c: 1 },
+    { q: "كم عدد أصول الدين عند الشيعة؟", a: ["3 أصول", "5 أصول", "7 أصول"], c: 1 },
+    { q: "ما هو لقب الإمام الخامس محمد بن علي (ع)؟", a: ["الباقر", "الصادق", "الكاظم"], c: 0 },
+    { q: "أين ولد الإمام علي بن أبي طالب (ع)؟", a: ["في المدينة", "داخل الكعبة", "في الكوفة"], c: 1 },
+    { q: "من هي زوجة النبي محمد (ص) الأولى؟", a: ["عائشة", "أم سلمة", "خديجة الكبرى"], c: 2 },
+    { q: "ما هو أول أصل من أصول الدين؟", a: ["العدل", "التوحيد", "النبوة"], c: 1 },
+    { q: "من هو إمامنا الصادق (ع)؟", a: ["الإمام الرابع", "الإمام السادس", "الإمام الثامن"], c: 1 },
+    { q: "ما اسم النهر الذي منعوا الحسين (ع) من شرب مائه؟", a: ["النيل", "دجلة", "الفرات"], c: 2 },
+    { q: "كم عدد فروع الدين؟", a: ["10 فروع", "5 فروع", "12 فرعاً"], c: 0 },
+    { q: "من هي السيدة التي كانت مع الحسين في كربلاء وخطبت بالكوفة؟", a: ["سكينة", "زينب الكبرى (ع)", "رباب"], c: 1 }
+];
 
-    let currentIdx = 0;
-    let score = 0;
+let currentQ = 0;
+let score = 0;
+let timer;
+let timeLeft = 10;
 
-    function loadQuestion() {
-        const qBox = document.getElementById("question-text");
-        const optBox = document.getElementById("options-container");
-        const feedback = document.getElementById("feedback");
-        
-        feedback.innerHTML = "";
-        optBox.innerHTML = "";
-        
-        let currentQ = quizData[currentIdx];
-        qBox.innerText = currentQ.q;
+function startGame() {
+    currentQ = 0;
+    score = 0;
+    document.getElementById('score').innerText = score;
+    nextQuestion();
+}
 
-        currentQ.a.forEach((option, i) => {
-            const button = document.createElement("button");
-            button.innerText = option;
-            button.classList.add("btn");
-            button.onclick = () => checkAnswer(i);
-            optBox.appendChild(button);
-        });
+function nextQuestion() {
+    if (currentQ >= quizData.length) {
+        showResult();
+        return;
     }
+    
+    timeLeft = 10;
+    document.getElementById('timer').innerText = timeLeft;
+    document.getElementById('q-num').innerText = currentQ + 1;
+    document.getElementById('feedback').innerText = "";
+    
+    const data = quizData[currentQ];
+    document.getElementById('q-text').innerText = data.q;
+    
+    const optionsDiv = document.getElementById('options');
+    optionsDiv.innerHTML = "";
+    
+    data.a.forEach((opt, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerText = opt;
+        btn.onclick = () => checkAnswer(index);
+        optionsDiv.appendChild(btn);
+    });
 
-    function checkAnswer(selected) {
-        const feedback = document.getElementById("feedback");
-        const correctSound = document.getElementById("correct-sound");
-        const wrongSound = document.getElementById("wrong-sound");
+    startTimer();
+}
 
-        if (selected === quizData[currentIdx].correct) {
-            feedback.innerHTML = "✅ أحسنت! إجابة صحيحة يا بطل";
-            feedback.style.color = "green";
-            score++;
-            document.getElementById("score-val").innerText = score;
-            correctSound.play();
-        } else {
-            feedback.innerHTML = "❌ حاول مرة أخرى، أنت تستطيع!";
-            feedback.style.color = "red";
-            wrongSound.play();
+function startTimer() {
+    clearInterval(timer);
+    timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById('timer').innerText = timeLeft;
+        if(timeLeft <= 3) document.getElementById('sound-tick').play();
+        
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            checkAnswer(-1); // الوقت انتهى
         }
+    }, 1000);
+}
 
-        setTimeout(() => {
-            currentIdx++;
-            if (currentIdx < quizData.length) {
-                loadQuestion();
-            } else {
-                document.getElementById("quiz-box").innerHTML = `<h2>انتهت اللعبة! 🎉</h2> <p>لقد جمعت ${score} من ${quizData.length}</p> <button class='btn' onclick='location.reload()'>إعادة اللعب</button>`;
-            }
-        }, 2000);
+function checkAnswer(index) {
+    clearInterval(timer);
+    const data = quizData[currentQ];
+    const btns = document.getElementsByClassName('option-btn');
+    const feedback = document.getElementById('feedback');
+
+    if (index === data.c) {
+        score++;
+        document.getElementById('score').innerText = score;
+        if(index !== -1) btns[index].classList.add('correct');
+        feedback.innerText = "🌟 أحسنت يا بطل! 🌟";
+        feedback.style.color = "green";
+        document.getElementById('sound-correct').play();
+    } else {
+        if(index !== -1) btns[index].classList.add('wrong');
+        btns[data.c].classList.add('correct');
+        feedback.innerText = index === -1 ? "⏰ انتهى الوقت!" : "جرب في السؤال القادم 💪";
+        feedback.style.color = "red";
+        document.getElementById('sound-wrong').play();
     }
 
-    loadQuestion();
-</script>
+    currentQ++;
+    setTimeout(nextQuestion, 2000);
+}
 
+function showResult() {
+    const container = document.getElementById('game-container');
+    let message = score > 15 ? "أنت عبقري وموالي مخلص! 🏆" : "أحسنت! استمر في التعلم 📚";
+    container.innerHTML = `
+        <img src="https://cdn-icons-png.flaticon.com/512/3112/3112946.png" style="width:150px">
+        <h2>انتهت المسابقة!</h2>
+        <p style="font-size:24px">${message}</p>
+        <p style="font-size:30px; color:var(--secondary)">درجتك: ${score} من 20</p>
+        <button class="option-btn" style="background:#ffca28" onclick="location.reload()">إعادة اللعب 🔄</button>
+    `;
+}
+</script>
 </body>
 </html>
