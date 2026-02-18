@@ -5,19 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مسابقة الأبطال الصغار</title>
     <style>
-        :root { --main-bg: #fdfdfd; --primary: #0288d1; --accent: #ff9800; --correct: #4caf50; --wrong: #f44336; }
+        :root { --primary: #0288d1; --accent: #ff9800; --correct: #4caf50; --wrong: #f44336; }
         body { font-family: 'Cairo', sans-serif; background: #e1f5fe; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         .game-card { background: white; width: 90%; max-width: 600px; padding: 25px; border-radius: 30px; box-shadow: 0 15px 40px rgba(0,0,0,0.1); border: 8px solid #b3e5fc; text-align: center; }
         .timer-box { width: 70px; height: 70px; border-radius: 50%; border: 5px solid var(--primary); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; margin: 0 auto 15px; color: var(--primary); }
-        .timer-low { border-color: var(--wrong); color: var(--wrong); animation: pulse 0.8s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .timer-low { border-color: var(--wrong); color: var(--wrong); }
         .q-text { font-size: 24px; color: #333; margin-bottom: 20px; font-weight: 800; min-height: 60px; }
         .options-list { display: grid; gap: 12px; }
-        .btn-opt { background: #fff; border: 3px solid #eceff1; padding: 16px; border-radius: 15px; font-size: 19px; cursor: pointer; transition: 0.3s; font-weight: 700; color: #37474f; outline: none; }
+        .btn-opt { background: #fff; border: 3px solid #eceff1; padding: 16px; border-radius: 15px; font-size: 19px; cursor: pointer; transition: 0.2s; font-weight: 700; color: #37474f; }
         
-        /* تلوين الإجابات عند التحقق */
-        .btn-opt.is-correct { background-color: var(--correct) !important; color: white !important; border-color: #2e7d32 !important; }
-        .btn-opt.is-wrong { background-color: var(--wrong) !important; color: white !important; border-color: #c62828 !important; }
+        /* التلوين الصريح - تم استخدام !important لضمان التنفيذ */
+        .is-correct { background-color: var(--correct) !important; color: white !important; border-color: #2e7d32 !important; }
+        .is-wrong { background-color: var(--wrong) !important; color: white !important; border-color: #c62828 !important; }
         
         .score-board { margin-top: 20px; display: flex; justify-content: space-between; font-weight: bold; color: #78909c; border-top: 2px dashed #cfd8dc; padding-top: 15px; }
     </style>
@@ -49,6 +48,7 @@
 <audio id="sound-fail" src="https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3"></audio>
 
 <script>
+// مصفوفة الأسئلة (نفس الأسئلة السابقة لضمان المحتوى)
 const data = [
     { q: "من هو أول أئمة أهل البيت عليهم السلام؟", a: ["الإمام علي (ع)", "الإمام الحسن (ع)", "الإمام الحسين (ع)"], c: 0 },
     { q: "كم عدد الأئمة المعصومين عليهم السلام؟", a: ["عشرة", "إثنا عشر", "أربعة عشر"], c: 1 },
@@ -86,7 +86,7 @@ const data = [
     { q: "ما هو أول فرع من فروع الدين؟", a: ["الصوم", "الصلاة", "الجهاد"], c: 1 },
     { q: "من هو والد الإمام علي (ع)؟", a: ["عبد المطلب", "أبو طالب", "حمزة"], c: 1 },
     { q: "ما هو لقب الإمام الحادي عشر؟", a: ["العسكري", "الهادي", "الجواد"], c: 0 },
-    { q: "من هو النبي الذي عاش في زمن نمرود؟", a: ["إبراهيم (ع)", "لوط (ع)", "يحيى (ع)"], c: 0 },
+    { q: "من هو النبي الذي عاش في زمن نمرود? ", a: ["إبراهيم (ع)", "لوط (ع)", "يحيى (ع)"], c: 0 },
     { q: "أين يقع مرقد الإمام الرضا (ع)؟", a: ["طهران", "مشهد", "قم"], c: 1 },
     { q: "ماذا نقول في الركوع؟", a: ["سبحان ربي العظيم", "سبحان ربي الأعلى", "الله أكبر"], c: 0 },
     { q: "من هو الإمام الذي سيظهر لينشر العدل؟", a: ["الإمام المهدي (عج)", "الإمام الهادي", "الإمام الصادق"], c: 0 }
@@ -98,7 +98,7 @@ function speak(text) {
     window.speechSynthesis.cancel();
     let utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ar-SA';
-    utterance.rate = 0.95;
+    utterance.rate = 0.9;
     window.speechSynthesis.speak(utterance);
 }
 
@@ -111,8 +111,9 @@ function begin() {
 function load() {
     if (idx >= data.length) { finish(); return; }
     sec = 15;
-    document.getElementById('timer').innerText = sec;
-    document.getElementById('timer').classList.remove('timer-low');
+    const timerDisp = document.getElementById('timer');
+    timerDisp.innerText = sec;
+    timerDisp.classList.remove('timer-low');
     document.getElementById('prog').innerText = idx + 1;
     
     const q = data[idx];
@@ -132,9 +133,9 @@ function load() {
     clearInterval(timer);
     timer = setInterval(() => {
         sec--;
-        document.getElementById('timer').innerText = sec;
+        timerDisp.innerText = sec;
         document.getElementById('sound-tick').play();
-        if(sec <= 5) document.getElementById('timer').classList.add('timer-low');
+        if(sec <= 5) timerDisp.classList.add('timer-low');
         if(sec <= 0) { clearInterval(timer); check(-1); }
     }, 1000);
 }
@@ -144,16 +145,19 @@ function check(choice) {
     const q = data[idx];
     const btns = document.querySelectorAll('.btn-opt');
     
-    // تعطيل الأزرار لمنع الضغط مرة أخرى
+    // تعطيل الضغط
     btns.forEach(b => b.onclick = null);
 
-    // المنطق الجديد للألوان:
+    // المنطق الدقيق للتلوين:
     btns.forEach((btn, i) => {
         if (i === q.c) {
-            // الإجابة الصحيحة دائماً تتلون بالأخضر
+            // الجواب الصحيح دائماً أخضر
             btn.classList.add('is-correct');
+        } else if (i === choice) {
+            // إذا كان اختيار الطفل خاطئاً، يتلون بالأحمر
+            btn.classList.add('is-wrong');
         } else {
-            // أي إجابة غير صحيحة تتلون بالأحمر
+            // بقية الأجوبة الخاطئة التي لم يخترها الطفل تتلون بالأحمر أيضاً بناءً على طلبك
             btn.classList.add('is-wrong');
         }
     });
@@ -167,18 +171,17 @@ function check(choice) {
     }
     
     idx++;
-    setTimeout(load, 3000); // وقت كافٍ للطفل لملاحظة التصحيح
+    setTimeout(load, 3000);
 }
 
 function finish() {
     const wrap = document.getElementById('game-wrap');
     wrap.innerHTML = `
-        <h2 style="color:var(--primary)">رائع جداً يا بطل! 🎉</h2>
-        <p style="font-size:22px">لقد أتممت 40 سؤالاً بنجاح</p>
-        <p style="font-size:35px; font-weight:900; color:var(--correct)">درجتك: ${score} من 40</p>
+        <h2 style="color:var(--primary)">انتهت المسابقة يا بطل! 🎉</h2>
+        <p style="font-size:32px; font-weight:900; color:var(--correct)">درجتك: ${score} من 40</p>
         <button class="btn-opt" style="background:var(--accent); color:white; border:none;" onclick="location.reload()">إعادة اللعب 🔄</button>
     `;
-    speak("أحسنت يا بطل. نتيجتُك النهائية هي " + score + " من أربعين.");
+    speak("أحسنت يا بطل. نتيجتُك هي " + score + " من أربعين.");
 }
 </script>
 </body>
