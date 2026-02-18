@@ -14,9 +14,9 @@
         .options-list { display: grid; gap: 12px; }
         .btn-opt { background: #fff; border: 3px solid #eceff1; padding: 16px; border-radius: 15px; font-size: 19px; cursor: pointer; transition: 0.2s; font-weight: 700; color: #37474f; }
         
-        /* التلوين الصريح - تم استخدام !important لضمان التنفيذ */
-        .is-correct { background-color: var(--correct) !important; color: white !important; border-color: #2e7d32 !important; }
-        .is-wrong { background-color: var(--wrong) !important; color: white !important; border-color: #c62828 !important; }
+        /* التلوين الصريح - الإصلاح النهائي */
+        .is-correct-ans { background-color: var(--correct) !important; color: white !important; border-color: #2e7d32 !important; }
+        .is-wrong-ans { background-color: var(--wrong) !important; color: white !important; border-color: #c62828 !important; }
         
         .score-board { margin-top: 20px; display: flex; justify-content: space-between; font-weight: bold; color: #78909c; border-top: 2px dashed #cfd8dc; padding-top: 15px; }
     </style>
@@ -48,7 +48,6 @@
 <audio id="sound-fail" src="https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3"></audio>
 
 <script>
-// مصفوفة الأسئلة (نفس الأسئلة السابقة لضمان المحتوى)
 const data = [
     { q: "من هو أول أئمة أهل البيت عليهم السلام؟", a: ["الإمام علي (ع)", "الإمام الحسن (ع)", "الإمام الحسين (ع)"], c: 0 },
     { q: "كم عدد الأئمة المعصومين عليهم السلام؟", a: ["عشرة", "إثنا عشر", "أربعة عشر"], c: 1 },
@@ -75,6 +74,8 @@ const data = [
     { q: "ما هو لقب الإمام الكاظم (ع)؟", a: ["باب الحوائج", "غريب طوس", "أبو تراب"], c: 0 },
     { q: "من هو الإمام الملقب بالجواد؟", a: ["الإمام التاسع", "الإمام العاشر", "الإمام الثامن"], c: 0 },
     { q: "أين استشهد الإمام الحسين (ع)؟", a: ["الكوفة", "كربلاء", "المدينة"], c: 1 },
+    { q: "ما هو لقب الإمام الحادي عشر؟", a: ["العسكري", "الهادي", "الجواد"], c: 0 },
+    { q: "من هو والد الإمام علي (ع)؟", a: ["عبد المطلب", "أبو طالب", "حمزة"], c: 1 },
     { q: "ما هو الكتاب الذي نزل على النبي محمد (ص)؟", a: ["التوراة", "القرآن", "الإنجيل"], c: 1 },
     { q: "من هو عم النبي الذي استشهد في أحد؟", a: ["أبو طالب", "حمزة", "العباس"], c: 1 },
     { q: "ما هي عاصمة الإمام علي (ع)؟", a: ["البصرة", "الكوفة", "مكة"], c: 1 },
@@ -84,11 +85,9 @@ const data = [
     { q: "ما هو لقب الإمام العاشر؟", a: ["الهادي", "العسكري", "الرضا"], c: 0 },
     { q: "كم عدد ركعات صلاة المغرب؟", a: ["2", "4", "3"], c: 2 },
     { q: "ما هو أول فرع من فروع الدين؟", a: ["الصوم", "الصلاة", "الجهاد"], c: 1 },
-    { q: "من هو والد الإمام علي (ع)؟", a: ["عبد المطلب", "أبو طالب", "حمزة"], c: 1 },
-    { q: "ما هو لقب الإمام الحادي عشر؟", a: ["العسكري", "الهادي", "الجواد"], c: 0 },
-    { q: "من هو النبي الذي عاش في زمن نمرود? ", a: ["إبراهيم (ع)", "لوط (ع)", "يحيى (ع)"], c: 0 },
+    { q: "من هو النبي الذي عاش في زمن نمرود؟", a: ["إبراهيم (ع)", "لوط (ع)", "يحيى (ع)"], c: 0 },
     { q: "أين يقع مرقد الإمام الرضا (ع)؟", a: ["طهران", "مشهد", "قم"], c: 1 },
-    { q: "ماذا نقول في الركوع؟", a: ["سبحان ربي العظيم", "سبحان ربي الأعلى", "الله أكبر"], c: 0 },
+    { q: "ماذا نقول في الركوع؟", a: ["سبحان ربي العظيم وبحمده", "سبحان ربي الأعلى وبحمده", "الله أكبر"], c: 0 },
     { q: "من هو الإمام الذي سيظهر لينشر العدل؟", a: ["الإمام المهدي (عج)", "الإمام الهادي", "الإمام الصادق"], c: 0 }
 ];
 
@@ -142,27 +141,25 @@ function load() {
 
 function check(choice) {
     clearInterval(timer);
-    const q = data[idx];
+    const qData = data[idx];
     const btns = document.querySelectorAll('.btn-opt');
     
-    // تعطيل الضغط
+    // تعطيل الأزرار فوراً
     btns.forEach(b => b.onclick = null);
 
-    // المنطق الدقيق للتلوين:
+    // منطق التلوين المصحح:
     btns.forEach((btn, i) => {
-        if (i === q.c) {
-            // الجواب الصحيح دائماً أخضر
-            btn.classList.add('is-correct');
-        } else if (i === choice) {
-            // إذا كان اختيار الطفل خاطئاً، يتلون بالأحمر
-            btn.classList.add('is-wrong');
+        if (i === qData.c) {
+            // الجواب الصحيح فقط هو الذي يأخذ اللون الأخضر
+            btn.classList.add('is-correct-ans');
         } else {
-            // بقية الأجوبة الخاطئة التي لم يخترها الطفل تتلون بالأحمر أيضاً بناءً على طلبك
-            btn.classList.add('is-wrong');
+            // جميع الأجوبة الأخرى تأخذ اللون الأحمر
+            btn.classList.add('is-wrong-ans');
         }
     });
 
-    if (choice === q.c) {
+    // تحديث النتيجة والأصوات
+    if (choice === qData.c) {
         score++;
         document.getElementById('pts').innerText = score;
         document.getElementById('sound-win').play();
