@@ -5,181 +5,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مسابقة الأبطال الصغار</title>
     <style>
-        :root { --primary: #0288d1; --accent: #ff9800; --correct: #4caf50; --wrong: #f44336; }
-        body { font-family: 'Cairo', sans-serif; background: #e1f5fe; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .game-card { background: white; width: 90%; max-width: 600px; padding: 25px; border-radius: 30px; box-shadow: 0 15px 40px rgba(0,0,0,0.1); border: 8px solid #b3e5fc; text-align: center; }
-        .timer-box { width: 70px; height: 70px; border-radius: 50%; border: 5px solid var(--primary); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; margin: 0 auto 15px; color: var(--primary); }
-        .timer-low { border-color: var(--wrong); color: var(--wrong); }
-        .q-text { font-size: 24px; color: #333; margin-bottom: 20px; font-weight: 800; min-height: 60px; }
-        .options-list { display: grid; gap: 12px; }
-        .btn-opt { background: #fff; border: 3px solid #eceff1; padding: 16px; border-radius: 15px; font-size: 19px; cursor: pointer; transition: 0.2s; font-weight: 700; color: #37474f; }
-        
-        /* التلوين الصريح - الإصلاح النهائي */
-        .is-correct-ans { background-color: var(--correct) !important; color: white !important; border-color: #2e7d32 !important; }
-        .is-wrong-ans { background-color: var(--wrong) !important; color: white !important; border-color: #c62828 !important; }
-        
-        .score-board { margin-top: 20px; display: flex; justify-content: space-between; font-weight: bold; color: #78909c; border-top: 2px dashed #cfd8dc; padding-top: 15px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #e0f7fa; text-align: center; padding: 20px; }
+        .quiz-container { background: white; max-width: 500px; margin: auto; padding: 30px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); border: 4px solid #4fc3f7; }
+        .character { width: 150px; height: 150px; margin-bottom: 20px; border-radius: 50%; }
+        .question { font-size: 24px; color: #0277bd; margin-bottom: 20px; font-weight: bold; }
+        .btn { display: block; width: 100%; padding: 15px; margin: 10px 0; font-size: 18px; cursor: pointer; border: none; border-radius: 10px; transition: 0.3s; background-color: #81d4fa; color: white; font-weight: bold; }
+        .btn:hover { background-color: #29b6f6; transform: scale(1.02); }
+        #feedback { font-size: 22px; font-weight: bold; margin-top: 20px; min-height: 30px; }
+        .score { font-size: 18px; color: #555; margin-top: 10px; }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<div class="game-card" id="game-wrap">
-    <div id="start-area">
-        <img src="https://cdn-icons-png.flaticon.com/512/3940/3940403.png" style="width: 120px;">
-        <h1 style="color: var(--primary);">مرحباً بك يا بطل!</h1>
-        <p>40 سؤالاً مع نطق آلي.. هل أنت مستعد؟</p>
-        <button class="btn-opt" style="background: var(--accent); color: white; border: none; width: 180px;" onclick="begin()">ابدأ الآن 🔊</button>
-    </div>
-
-    <div id="quiz-area" style="display:none;">
-        <div class="timer-box" id="timer">15</div>
-        <div class="q-text" id="question">جاري التحميل...</div>
-        <div class="options-list" id="options"></div>
-        <div class="score-board">
-            <span>النقاط: <span id="pts">0</span></span>
-            <span>السؤال: <span id="prog">1</span> / 40</span>
-        </div>
+<div class="quiz-container">
+    <img src="https://cdn-icons-png.flaticon.com/512/4392/4392465.png" alt="شخصية كرتونية" class="character" id="char-img">
+    
+    <div id="quiz-box">
+        <div class="question" id="question-text">تحميل السؤال...</div>
+        <div id="options-container"></div>
+        <div id="feedback"></div>
+        <div class="score">النتيجة: <span id="score-val">0</span></div>
     </div>
 </div>
 
-<audio id="sound-tick" src="https://www.soundjay.com/buttons/sounds/button-20.mp3"></audio>
-<audio id="sound-win" src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3"></audio>
-<audio id="sound-fail" src="https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3"></audio>
+<audio id="correct-sound" src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3"></audio>
+<audio id="wrong-sound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
 
 <script>
-const data = [
-    { q: "من هو أول أئمة أهل البيت عليهم السلام؟", a: ["الإمام علي (ع)", "الإمام الحسن (ع)", "الإمام الحسين (ع)"], c: 0 },
-    { q: "كم عدد الأئمة المعصومين عليهم السلام؟", a: ["عشرة", "إثنا عشر", "أربعة عشر"], c: 1 },
-    { q: "من هي سيدة نساء العالمين؟", a: ["السيدة خديجة", "السيدة مريم", "فاطمة الزهراء (ع)"], c: 2 },
-    { q: "ما هو لقب الإمام الثامن علي بن موسى (ع)؟", a: ["الرضا", "الجواد", "الهادي"], c: 0 },
-    { q: "من هو النبي الذي بنى الكعبة؟", a: ["إبراهيم (ع)", "يوسف (ع)", "نوح (ع)"], c: 0 },
-    { q: "ما اسم والد الإمام الحسين (ع)؟", a: ["حمزة", "علي بن أبي طالب (ع)", "العباس"], c: 1 },
-    { q: "أين ولد الإمام علي (ع)؟", a: ["في مكة", "في جوف الكعبة", "في المدينة"], c: 1 },
-    { q: "من هو الإمام الغائب الذي ننتظر ظهوره؟", a: ["الإمام المهدي (عج)", "الإمام العسكري", "الإمام الهادي"], c: 0 },
-    { q: "كم عدد ركعات صلاة الصبح؟", a: ["3 ركعات", "ركعتان", "4 ركعات"], c: 1 },
-    { q: "ماذا نقول في السجود؟", a: ["سبحان ربي العظيم", "سبحان ربي الأعلى", "الحمد لله"], c: 1 },
-    { q: "من هو الإمام الذي يلقب بـ زين العابدين؟", a: ["الإمام السجاد", "الإمام الصادق", "الإمام الباقر"], c: 0 },
-    { q: "في أي شهر نصوم؟", a: ["شوال", "رجب", "رمضان"], c: 2 },
-    { q: "من هو بطل كربلاء الذي جلب الماء؟", a: ["علي الأكبر", "أبا الفضل العباس", "القاسم"], c: 1 },
-    { q: "ما هو لقب الإمام الخامس محمد بن علي (ع)؟", a: ["الباقر", "الصادق", "الكاظم"], c: 0 },
-    { q: "ما اسم أم الإمام الحسين (ع)؟", a: ["أم البنين", "فاطمة الزهراء (ع)", "زينب"], c: 1 },
-    { q: "من هو الإمام السادس؟", a: ["الإمام الصادق", "الإمام الجواد", "الإمام الرضا"], c: 0 },
-    { q: "ما هو أول أصل من أصول الدين؟", a: ["العدل", "النبوة", "التوحيد"], c: 2 },
-    { q: "أين يقع مرقد الإمام علي (ع)؟", a: ["كربلاء", "النجف الأشرف", "سامراء"], c: 1 },
-    { q: "ما اسم ابن الإمام الحسين الرضيع؟", a: ["عبد الله", "علي الأكبر", "جعفر"], c: 0 },
-    { q: "من هي ابنة النبي محمد (ص)؟", a: ["زينب", "رقية", "فاطمة الزهراء"], c: 2 },
-    { q: "من هو النبي الذي كلم الله؟", a: ["عيسى (ع)", "موسى (ع)", "داوود (ع)"], c: 1 },
-    { q: "كم عدد أصول الدين؟", a: ["3", "5", "10"], c: 1 },
-    { q: "ما هو لقب الإمام الكاظم (ع)؟", a: ["باب الحوائج", "غريب طوس", "أبو تراب"], c: 0 },
-    { q: "من هو الإمام الملقب بالجواد؟", a: ["الإمام التاسع", "الإمام العاشر", "الإمام الثامن"], c: 0 },
-    { q: "أين استشهد الإمام الحسين (ع)؟", a: ["الكوفة", "كربلاء", "المدينة"], c: 1 },
-    { q: "ما هو لقب الإمام الحادي عشر؟", a: ["العسكري", "الهادي", "الجواد"], c: 0 },
-    { q: "من هو والد الإمام علي (ع)؟", a: ["عبد المطلب", "أبو طالب", "حمزة"], c: 1 },
-    { q: "ما هو الكتاب الذي نزل على النبي محمد (ص)؟", a: ["التوراة", "القرآن", "الإنجيل"], c: 1 },
-    { q: "من هو عم النبي الذي استشهد في أحد؟", a: ["أبو طالب", "حمزة", "العباس"], c: 1 },
-    { q: "ما هي عاصمة الإمام علي (ع)؟", a: ["البصرة", "الكوفة", "مكة"], c: 1 },
-    { q: "كم عدد فروع الدين؟", a: ["5", "10", "12"], c: 1 },
-    { q: "من هو الإمام الذي ولد في 15 رمضان؟", a: ["الإمام الحسن (ع)", "الإمام الحسين (ع)", "الإمام السجاد"], c: 0 },
-    { q: "من هي أخت الإمام الحسين في كربلاء؟", a: ["زينب الكبرى", "سكينة", "فاطمة"], c: 0 },
-    { q: "ما هو لقب الإمام العاشر؟", a: ["الهادي", "العسكري", "الرضا"], c: 0 },
-    { q: "كم عدد ركعات صلاة المغرب؟", a: ["2", "4", "3"], c: 2 },
-    { q: "ما هو أول فرع من فروع الدين؟", a: ["الصوم", "الصلاة", "الجهاد"], c: 1 },
-    { q: "من هو النبي الذي عاش في زمن نمرود؟", a: ["إبراهيم (ع)", "لوط (ع)", "يحيى (ع)"], c: 0 },
-    { q: "أين يقع مرقد الإمام الرضا (ع)؟", a: ["طهران", "مشهد", "قم"], c: 1 },
-    { q: "ماذا نقول في الركوع؟", a: ["سبحان ربي العظيم وبحمده", "سبحان ربي الأعلى وبحمده", "الله أكبر"], c: 0 },
-    { q: "من هو الإمام الذي سيظهر لينشر العدل؟", a: ["الإمام المهدي (عج)", "الإمام الهادي", "الإمام الصادق"], c: 0 }
-];
+    const quizData = [
+        { q: "من هو أول أئمة أهل البيت عليهم السلام؟", a: ["الإمام علي (ع)", "الإمام الحسن (ع)", "الإمام الحسين (ع)"], correct: 0 },
+        { q: "كم عدد الأئمة المعصومين عليهم السلام؟", a: ["10 أئمة", "12 إماماً", "14 إماماً"], correct: 1 },
+        { q: "ما هو لقب الإمام الثامن علي بن موسى (ع)؟", a: ["الجواد", "الرضا", "الكاظم"], correct: 1 },
+        { q: "من هي سيدة نساء العالمين؟", a: ["السيدة خديجة", "السيدة زينب", "السيدة فاطمة الزهراء"], correct: 2 }
+    ];
 
-let idx = 0; let score = 0; let timer; let sec = 15;
+    let currentIdx = 0;
+    let score = 0;
 
-function speak(text) {
-    window.speechSynthesis.cancel();
-    let utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ar-SA';
-    utterance.rate = 0.9;
-    window.speechSynthesis.speak(utterance);
-}
+    function loadQuestion() {
+        const qBox = document.getElementById("question-text");
+        const optBox = document.getElementById("options-container");
+        const feedback = document.getElementById("feedback");
+        
+        feedback.innerHTML = "";
+        optBox.innerHTML = "";
+        
+        let currentQ = quizData[currentIdx];
+        qBox.innerText = currentQ.q;
 
-function begin() {
-    document.getElementById('start-area').style.display = 'none';
-    document.getElementById('quiz-area').style.display = 'block';
-    load();
-}
-
-function load() {
-    if (idx >= data.length) { finish(); return; }
-    sec = 15;
-    const timerDisp = document.getElementById('timer');
-    timerDisp.innerText = sec;
-    timerDisp.classList.remove('timer-low');
-    document.getElementById('prog').innerText = idx + 1;
-    
-    const q = data[idx];
-    document.getElementById('question').innerText = q.q;
-    speak(q.q);
-    
-    const container = document.getElementById('options');
-    container.innerHTML = "";
-    q.a.forEach((opt, i) => {
-        const b = document.createElement('button');
-        b.className = 'btn-opt';
-        b.innerText = opt;
-        b.onclick = () => check(i);
-        container.appendChild(b);
-    });
-    
-    clearInterval(timer);
-    timer = setInterval(() => {
-        sec--;
-        timerDisp.innerText = sec;
-        document.getElementById('sound-tick').play();
-        if(sec <= 5) timerDisp.classList.add('timer-low');
-        if(sec <= 0) { clearInterval(timer); check(-1); }
-    }, 1000);
-}
-
-function check(choice) {
-    clearInterval(timer);
-    const qData = data[idx];
-    const btns = document.querySelectorAll('.btn-opt');
-    
-    // تعطيل الأزرار فوراً
-    btns.forEach(b => b.onclick = null);
-
-    // منطق التلوين المصحح:
-    btns.forEach((btn, i) => {
-        if (i === qData.c) {
-            // الجواب الصحيح فقط هو الذي يأخذ اللون الأخضر
-            btn.classList.add('is-correct-ans');
-        } else {
-            // جميع الأجوبة الأخرى تأخذ اللون الأحمر
-            btn.classList.add('is-wrong-ans');
-        }
-    });
-
-    // تحديث النتيجة والأصوات
-    if (choice === qData.c) {
-        score++;
-        document.getElementById('pts').innerText = score;
-        document.getElementById('sound-win').play();
-    } else {
-        document.getElementById('sound-fail').play();
+        currentQ.a.forEach((option, i) => {
+            const button = document.createElement("button");
+            button.innerText = option;
+            button.classList.add("btn");
+            button.onclick = () => checkAnswer(i);
+            optBox.appendChild(button);
+        });
     }
-    
-    idx++;
-    setTimeout(load, 3000);
-}
 
-function finish() {
-    const wrap = document.getElementById('game-wrap');
-    wrap.innerHTML = `
-        <h2 style="color:var(--primary)">انتهت المسابقة يا بطل! 🎉</h2>
-        <p style="font-size:32px; font-weight:900; color:var(--correct)">درجتك: ${score} من 40</p>
-        <button class="btn-opt" style="background:var(--accent); color:white; border:none;" onclick="location.reload()">إعادة اللعب 🔄</button>
-    `;
-    speak("أحسنت يا بطل. نتيجتُك هي " + score + " من أربعين.");
-}
+    function checkAnswer(selected) {
+        const feedback = document.getElementById("feedback");
+        const correctSound = document.getElementById("correct-sound");
+        const wrongSound = document.getElementById("wrong-sound");
+
+        if (selected === quizData[currentIdx].correct) {
+            feedback.innerHTML = "✅ أحسنت! إجابة صحيحة يا بطل";
+            feedback.style.color = "green";
+            score++;
+            document.getElementById("score-val").innerText = score;
+            correctSound.play();
+        } else {
+            feedback.innerHTML = "❌ حاول مرة أخرى، أنت تستطيع!";
+            feedback.style.color = "red";
+            wrongSound.play();
+        }
+
+        setTimeout(() => {
+            currentIdx++;
+            if (currentIdx < quizData.length) {
+                loadQuestion();
+            } else {
+                document.getElementById("quiz-box").innerHTML = `<h2>انتهت اللعبة! 🎉</h2> <p>لقد جمعت ${score} من ${quizData.length}</p> <button class='btn' onclick='location.reload()'>إعادة اللعب</button>`;
+            }
+        }, 2000);
+    }
+
+    loadQuestion();
 </script>
+
 </body>
 </html>
