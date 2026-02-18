@@ -1,197 +1,152 @@
 <!DOCTYPE html>
-<html lang="ar" dir="ltr">
+<html lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
+<meta charset="UTF-8">
+<title>مسابقة دينية للأطفال</title>
 
-        body {
-            background-color: #f0f0f0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: 'Roboto', sans-serif;
-        }
+<style>
+body{
+    font-family: Arial;
+    text-align:center;
+    background:#f5f5f5;
+    padding:20px;
+}
 
-        /* حاوية الملصق */
-        .label-card {
-            background: white;
-            width: 500px;
-            height: 280px;
-            border-radius: 15px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
-        }
+.card{
+    background:white;
+    padding:20px;
+    border-radius:15px;
+    box-shadow:0 0 10px rgba(0,0,0,0.1);
+    max-width:500px;
+    margin:auto;
+}
 
-        /* الشريط الأحمر الجانبي (تجميلي) */
-        .red-accent {
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 15px;
-            background: linear-gradient(to bottom, #d32f2f, #e53935);
-        }
+button{
+    display:block;
+    width:100%;
+    margin:10px 0;
+    padding:12px;
+    font-size:16px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    background:#4CAF50;
+    color:white;
+}
 
-        /* القسم الأيسر: النصوص والكبسولات */
-        .left-section {
-            flex: 1;
-            padding-left: 20px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            height: 80%;
-        }
+button:hover{
+    background:#45a049;
+}
 
-        .capsule-badge {
-            border: 2px solid #333;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-size: 12px;
-            font-weight: bold;
-            color: #333;
-            line-height: 1;
-            transform: rotate(-10deg);
-        }
-        .capsule-badge span {
-            font-size: 18px;
-        }
+#timer{
+    font-size:22px;
+    color:red;
+    margin:10px;
+}
 
-        .description {
-            color: #d32f2f;
-            font-size: 14px;
-            font-weight: 700;
-            line-height: 1.4;
-            max-width: 150px;
-        }
-
-        /* القسم الأوسط: الشعار */
-        .logo-section {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-
-        /* رسم الشعار (الذرات) باستخدام CSS */
-        .orbit {
-            width: 80px;
-            height: 140px;
-            border: 6px solid #1565c0; /* أزرق */
-            border-radius: 50%;
-            position: absolute;
-            transform: rotate(45deg);
-            border-left-color: transparent; /* لجعله يبدو كهلال */
-            border-bottom-color: transparent;
-        }
-        .orbit::after {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border: 6px solid #1565c0;
-            border-radius: 50%;
-            top: -6px;
-            left: -6px;
-            border-right-color: transparent;
-            border-top-color: transparent;
-            transform: rotate(10deg);
-        }
-
-        .core {
-            width: 25px;
-            height: 25px;
-            background: #d32f2f; /* أحمر */
-            border-radius: 50%;
-            position: relative;
-            z-index: 10;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-        }
-
-        /* القسم الأيمن: الاسم */
-        .title-section {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-        }
-
-        h1 {
-            font-size: 60px;
-            margin: 0;
-            letter-spacing: -2px;
-            display: flex;
-            flex-direction: column; /* لجعل النص عمودي إذا أردت، أو أفقي */
-            /* في الصورة النص أفقي بالنسبة للملصق */
-            flex-direction: row; 
-        }
-
-        .text-blue {
-            color: #1565c0; /* أزرق */
-            font-weight: 900;
-        }
-
-        .text-red {
-            color: #e53935; /* أحمر */
-            font-weight: 900;
-        }
-
-        /* إضافة لمسة واقعية */
-        .reflection {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 100%;
-            background: linear-gradient(105deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 60%);
-            pointer-events: none;
-        }
-
-    </style>
+#result{
+    font-size:20px;
+    margin-top:10px;
+}
+</style>
 </head>
+
 <body>
 
-    <div class="label-card">
-        <div class="red-accent"></div>
-        <div class="reflection"></div>
+<div class="card">
+<h2 id="question"></h2>
 
-        <div class="left-section">
-            <div class="capsule-badge">
-                <span>30</span>
-                softgel
-            </div>
-            <div class="description">
-                antianemic complex with<br>
-                iron, vitamins and minerals
-            </div>
-        </div>
+<div id="timer">30</div>
 
-        <div class="logo-section">
-            <div class="orbit"></div>
-            <div class="core"></div>
-        </div>
+<div id="answers"></div>
 
-        <div class="title-section">
-            <h1>
-                <span class="text-blue">Euro</span><span class="text-red">far</span>
-            </h1>
-        </div>
-    </div>
+<div id="result"></div>
+
+<button onclick="nextQuestion()">سؤال جديد</button>
+</div>
+
+<script>
+const quiz = [
+{
+q:"من هو أول إمام عند الشيعة؟",
+a:["علي بن أبي طالب","الحسن","الحسين"],
+correct:0
+},
+{
+q:"في أي شهر استشهد الإمام الحسين؟",
+a:["رمضان","محرم","صفر"],
+correct:1
+},
+{
+q:"من هي أم الإمام الحسن والحسين؟",
+a:["فاطمة الزهراء","زينب","خديجة"],
+correct:0
+}
+];
+
+let current;
+let time;
+let timer;
+
+function startTimer(){
+time = 30;
+document.getElementById("timer").textContent = time;
+
+timer = setInterval(()=>{
+time--;
+document.getElementById("timer").textContent = time;
+
+if(time === 0){
+clearInterval(timer);
+document.getElementById("result").textContent="⏰ انتهى الوقت!";
+disableButtons();
+}
+},1000);
+}
+
+function loadQuestion(){
+clearInterval(timer);
+document.getElementById("result").textContent="";
+
+current = quiz[Math.floor(Math.random()*quiz.length)];
+document.getElementById("question").textContent=current.q;
+
+const answersDiv=document.getElementById("answers");
+answersDiv.innerHTML="";
+
+current.a.forEach((ans,i)=>{
+let btn=document.createElement("button");
+btn.textContent=ans;
+btn.onclick=()=>checkAnswer(i);
+answersDiv.appendChild(btn);
+});
+
+startTimer();
+}
+
+function checkAnswer(i){
+clearInterval(timer);
+
+if(i===current.correct){
+document.getElementById("result").textContent="✅ إجابة صحيحة!";
+}else{
+document.getElementById("result").textContent="❌ حاول مرة أخرى!";
+}
+
+disableButtons();
+}
+
+function disableButtons(){
+document.querySelectorAll("#answers button")
+.forEach(b=>b.disabled=true);
+}
+
+function nextQuestion(){
+loadQuestion();
+}
+
+loadQuestion();
+</script>
 
 </body>
 </html>
